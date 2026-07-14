@@ -8,7 +8,7 @@ import {
   TrendingUp, Brain, MessageSquare, FolderOpen, Upload, Maximize2, Share2, Download,
   Moon, Sun, Loader2, Check, RefreshCw, Play, List, Edit3, Eye, Video,
   MoreHorizontal, Trash2, Minimize2, MoreVertical, PanelRight, PanelLeft, History, Globe,
-  CheckCircle, XCircle, Music, User
+  CheckCircle, XCircle, Music, User, Lock
 } from "lucide-react";
 import { HomeworkMainView, HomeworkDetailPage, HomeworkStatsPanel } from "./modules/homework";
 
@@ -5536,7 +5536,7 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
 
   const switchResource = (phaseIdx: number, resIdx: number) => {
     setActiveRes({ phaseIdx, resIdx });
-    setPage(0);
+    setPageIndex(0);
     if (editing) {
       const newResource = resources[phases[phaseIdx].resIdx[resIdx]];
       setDraft({
@@ -5995,7 +5995,7 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                       style={iconBtnStyle(minimalMode)}
                       onClick={() => setMinimalMode(!minimalMode)}
                     >
-                      {minimalMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                      {minimalMode ? <PanelRight size={14} /> : <PanelLeft size={14} />}
                     </button>
                   </IconTip>
                   <button onClick={() => {
@@ -6997,6 +6997,259 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                 }}
               >确定</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 预览区全屏 */}
+      {previewFs && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: tk.bgPrimary, display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => setTocPanelOpen(!tocPanelOpen)} style={{
+                background: tocPanelOpen ? tk.bgBrandSubtle : tk.bgWhite,
+                border: tocPanelOpen ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderDefault}`,
+                color: tocPanelOpen ? tk.textBrand : tk.textSecondary,
+                padding: "6px 12px", borderRadius: tk.radiusSm, fontSize: 12,
+                cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <List size={14} /> 目录
+              </button>
+              <div style={{ fontSize: 12, color: tk.textSecondary }}>
+                {currentPhase?.title} · {activeResource.name}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)} title={rightPanelCollapsed ? "展开资源信息" : "收起资源信息"} style={{
+                background: rightPanelCollapsed ? tk.bgWhite : tk.bgBrandSubtle,
+                border: rightPanelCollapsed ? `1px solid ${tk.borderDefault}` : `1px solid ${tk.borderBrand}`,
+                color: rightPanelCollapsed ? tk.textSecondary : tk.textBrand,
+                padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <ClipboardList size={14} />
+              </button>
+              <button onClick={() => {
+                if (activeRes.resIdx > 0) {
+                  switchResource(activeRes.phaseIdx, activeRes.resIdx - 1);
+                } else if (activeRes.phaseIdx > 0) {
+                  const prevPhase = phases[activeRes.phaseIdx - 1];
+                  switchResource(activeRes.phaseIdx - 1, prevPhase.resIdx.length - 1);
+                }
+              }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }} title="上一资源">
+                <ChevronLeft size={16} />
+              </button>
+              <button onClick={() => {
+                const currentPhaseRes = phases[activeRes.phaseIdx];
+                if (activeRes.resIdx < currentPhaseRes.resIdx.length - 1) {
+                  switchResource(activeRes.phaseIdx, activeRes.resIdx + 1);
+                } else if (activeRes.phaseIdx < phases.length - 1) {
+                  switchResource(activeRes.phaseIdx + 1, 0);
+                }
+              }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }} title="下一资源">
+                <ChevronRight size={16} />
+              </button>
+              <button onClick={() => { setPreviewFs(false); setTocPanelOpen(false); }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px 12px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <X size={14} /> 退出全屏
+              </button>
+            </div>
+          </div>
+
+          {tocPanelOpen && (
+            <div style={{ padding: "12px 0", background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}`, position: "relative" }}>
+              {tocOverflow && (
+                <>
+                  <button onClick={() => scrollTocBy(-1)} style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0, zIndex: 5,
+                    width: 40, background: "linear-gradient(to right, rgba(255,255,255,0.9), transparent)",
+                    border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronLeft size={16} style={{ color: tk.textSecondary }} />
+                  </button>
+                  <button onClick={() => scrollTocBy(1)} style={{
+                    position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 5,
+                    width: 40, background: "linear-gradient(to left, rgba(255,255,255,0.9), transparent)",
+                    border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronRight size={16} style={{ color: tk.textSecondary }} />
+                  </button>
+                </>
+              )}
+              <div ref={tocScrollRef} className="hide-scrollbar" style={{
+                display: "flex", gap: 8, overflowX: "auto", padding: "0 48px",
+                scrollbarWidth: "none", msOverflowStyle: "none",
+              }}>
+                {phases.map((p, pi) => (
+                  <div key={p.num} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ fontSize: 11, color: tk.textPlaceholder, paddingLeft: 4 }}>
+                      {p.title}：{p.subtitle}
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {p.resIdx.map((ridx, ri) => {
+                        const res = resources[ridx];
+                        const isCurrent = activeRes.phaseIdx === pi && activeRes.resIdx === ri;
+                        return (
+                          <div
+                            key={res.id}
+                            onClick={() => { switchResource(pi, ri); setTocPanelOpen(false); }}
+                            style={{
+                              width: 110, height: 64, borderRadius: 4,
+                              border: isCurrent ? `2px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                              background: isCurrent ? tk.bgBrandSubtle : tk.bgWhite,
+                              cursor: "pointer", position: "relative", overflow: "hidden",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {res.type === "PPT" && res.pages && res.pages[0]?.image && (
+                              <img src={res.pages[0].image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "图片" && res.images && res.images[0]?.url && (
+                              <img src={res.images[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "视频" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=video%20playback%20interface%20education%20classroom%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "练习" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=quiz%20question%20education%20test%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "作业" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=homework%20assignment%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "教案" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=document%20lesson%20plan%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "网页" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=web%20page%20interface%20education%20tool%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "音频" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=audio%20player%20interface%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            <div style={{
+                              position: "absolute", bottom: 0, left: 0, right: 0,
+                              background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)",
+                              padding: "4px 6px",
+                            }}>
+                              <span style={{ fontSize: 10, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{res.name}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0, background: tk.bgPrimary, padding: 16 }}>
+            <div style={{ flex: rightPanelCollapsed ? 1 : 3, background: tk.bgWhite, overflow: "hidden", minWidth: 0, position: "relative", borderRadius: 8 }}>
+              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                {activeRes.phaseIdx === -1 ? (
+                  <div style={{ padding: tk.spacingLg }}>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
+                    <div style={{ fontSize: 13, color: tk.textSecondary, lineHeight: "1.8" }}>
+                      {view.sections?.map((section, si) => (
+                        <div key={si} style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
+                          <div>{section.body}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  renderResourceContent(view, pageIndex, setPageIndex, "light", editing, {
+                    updatePage, updateSection, updateChapter, updateQuestion, updateOption,
+                    patchDraft,
+                  })
+                )}
+              </div>
+            </div>
+
+            {!rightPanelCollapsed && (
+              <div style={{ flex: 1, background: tk.bgPrimary, flexShrink: 0, overflowY: "auto", padding: 0, marginLeft: 12 }}>
+                <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, border: "1px solid " + tk.borderHairline, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid " + tk.borderHairline }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary }}>资源信息</span>
+                    <button onClick={() => setRightPanelCollapsed(true)} title="收起资源信息" style={{
+                      background: tk.bgPrimary, border: "none", cursor: "pointer",
+                      padding: "4px 6px", borderRadius: tk.radiusSm,
+                      width: 24, height: 24,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <X size={14} style={{ color: tk.textSecondary }} />
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto", padding: tk.spacingMd }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: tk.spacingMd }}>
+                      {activeRes.phaseIdx === -1 ? (
+                        <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                          <div style={{ fontSize: 12, color: tk.textSecondary, lineHeight: "1.6" }}>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>类型</div>
+                              <div>教案</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>描述</div>
+                              <div>教学流程、讲义等其他内容</div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                            <div style={{ fontSize: 12, color: tk.textSecondary, lineHeight: "1.6" }}>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>资源名称</div>
+                                <div style={{ fontWeight: 600, color: tk.textPrimary }}>{activeResource.name}</div>
+                              </div>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>资源类型</div>
+                                <div>{activeResource.type}</div>
+                              </div>
+                              {activeResource.summary && (
+                                <div>
+                                  <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>简介</div>
+                                  <div>{activeResource.summary}</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {(activeResource.tags && activeResource.tags.length > 0) && (
+                            <div>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 8 }}>标签</div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {activeResource.tags.map((tag, ti) => (
+                                  <span key={ti} style={{
+                                    fontSize: 11, color: tk.textSecondary,
+                                    background: tk.bgBrandSubtle, padding: "2px 8px",
+                                    borderRadius: tk.radiusSm,
+                                  }}>{tag}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -9216,6 +9469,20 @@ type ResourceItem = {
   canEdit?: boolean;
   canDelete?: boolean;
 };
+
+type Asset = {
+  id: number;
+  title: string;
+  category: "课堂包" | "教学应用" | "习题作业" | "文档课件" | "视频" | "其他";
+  subject: string;
+  grade: string;
+  updateTime: string;
+  isShared: boolean;
+  resource: {
+    type: string;
+    pkg?: ClassPackage;
+  };
+};
 type NotificationItem = {
   id: number;
   resourceId: number;
@@ -9303,106 +9570,1510 @@ const NOTIFICATIONS: NotificationItem[] = [
   { id: 3, resourceId: 107, resourceName: "生物细胞结构课堂包", status: "rejected", time: "2026-07-02 15:00", comment: "资源内容需要更新至最新教材版本" },
 ];
 
+const MY_ASSETS: Asset[] = [
+  {
+    id: 1,
+    title: "勾股定理课堂包",
+    category: "课堂包",
+    subject: "数学",
+    grade: "八年级",
+    updateTime: "2026-07-13",
+    isShared: true,
+    resource: {
+      type: "pkg",
+      pkg: SAMPLE_PACKAGE,
+    },
+  },
+  {
+    id: 2,
+    title: "英语听力训练教案",
+    category: "文档课件",
+    subject: "英语",
+    grade: "高一",
+    updateTime: "2026-07-12",
+    isShared: false,
+    resource: { type: "doc" },
+  },
+  {
+    id: 3,
+    title: "一元二次方程练习题",
+    category: "习题作业",
+    subject: "数学",
+    grade: "九年级",
+    updateTime: "2026-07-11",
+    isShared: true,
+    resource: { type: "exercise" },
+  },
+  {
+    id: 4,
+    title: "细胞结构微课视频",
+    category: "视频",
+    subject: "生物",
+    grade: "高一",
+    updateTime: "2026-07-10",
+    isShared: false,
+    resource: { type: "video" },
+  },
+  {
+    id: 5,
+    title: "化学实验模拟平台",
+    category: "教学应用",
+    subject: "化学",
+    grade: "高二",
+    updateTime: "2026-07-09",
+    isShared: true,
+    resource: { type: "app" },
+  },
+  {
+    id: 6,
+    title: "班级管理表格",
+    category: "其他",
+    subject: "全部",
+    grade: "全部",
+    updateTime: "2026-07-08",
+    isShared: false,
+    resource: { type: "other" },
+  },
+];
+
+function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview" | "edit" | "teaching" }) {
+  const [pageIndex, setPageIndex] = useState(0);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [hoveredRes, setHoveredRes] = useState<{ phaseIdx: number; resIdx: number } | null>(null);
+
+  const convertResources = useMemo(() => {
+    if (pkg && pkg.phases && pkg.phases.length > 0) {
+      const allResources: ClassPackageRes[] = [];
+      pkg.phases.forEach(phase => {
+        if (phase.resources && phase.resources.length > 0) {
+          phase.resources.forEach(res => {
+            const typeMap: Record<string, ClassPackageRes["type"]> = {
+              ppt: "PPT", doc: "文档", video: "视频", image: "图片",
+              quiz: "练习", audio: "音频",
+            };
+            const resType = typeMap[res.type] || "文档";
+            const newRes: ClassPackageRes = {
+              id: res.id,
+              type: resType,
+              name: res.name,
+              summary: res.preview || "",
+              tags: [],
+              thumb: res.thumb,
+            };
+            if (resType === "PPT") {
+              newRes.pages = [{ title: res.name, content: res.preview, layout: "content" }];
+            } else if (resType === "视频") {
+              newRes.videoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+              newRes.chapters = [{ time: "00:00", title: res.name }];
+            } else if (resType === "图片") {
+              newRes.images = [{ url: `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(res.name + " education")}&image_size=landscape_16_9`, caption: res.name }];
+            } else if (resType === "练习") {
+              newRes.questions = [{ id: 1, question: res.preview || "暂无题目", options: ["A", "B", "C", "D"], answer: 0, type: "单选题", explanation: "" }];
+            } else {
+              newRes.sections = [{ heading: res.name, body: res.preview || "" }];
+            }
+            allResources.push(newRes);
+          });
+        }
+      });
+      return allResources;
+    }
+    return JSON.parse(JSON.stringify(CLASS_PACKAGE_RESOURCES));
+  }, [pkg]);
+
+  const convertPhases = useMemo(() => {
+    if (pkg && pkg.phases && pkg.phases.length > 0) {
+      let globalIdx = 0;
+      return pkg.phases.map((phase, idx) => {
+        const parts = phase.label.split("：");
+        return {
+          num: idx + 1,
+          title: parts[0] || phase.label,
+          subtitle: parts[1] || phase.desc || "自定义阶段",
+          duration: phase.duration,
+          resIdx: phase.resources && phase.resources.length > 0 
+            ? Array.from({ length: phase.resources.length }, () => globalIdx++)
+            : [],
+        };
+      });
+    }
+    return JSON.parse(JSON.stringify(CLASS_PACKAGE_PHASES));
+  }, [pkg]);
+
+  const [resources, setResources] = useState<ClassPackageRes[]>(convertResources);
+  const [phases, setPhases] = useState<ClassPackagePhase[]>(convertPhases);
+
+  useEffect(() => {
+    setResources(convertResources);
+    setPhases(convertPhases);
+    setActiveRes({ phaseIdx: 0, resIdx: 0 });
+    setPageIndex(0);
+  }, [convertResources, convertPhases]);
+
+  const [activeRes, setActiveRes] = useState<{ phaseIdx: number; resIdx: number }>({ phaseIdx: 0, resIdx: 0 });
+
+  const switchResource = (phaseIdx: number, resIdx: number) => {
+    setActiveRes({ phaseIdx, resIdx });
+    setPageIndex(0);
+  };
+
+  const [dragInfo, setDragInfo] = useState<
+    | { kind: "step"; fromIdx: number }
+    | { kind: "res"; fromPhaseIdx: number; fromResIdx: number }
+    | null
+  >(null);
+  const [dropTarget, setDropTarget] = useState<
+    | { kind: "step"; idx: number; edge: "left" | "right" }
+    | { kind: "res"; phaseIdx: number; resIdx: number; edge?: "left" | "right" }
+    | null
+  >(null);
+  const [stepMoreOpen, setStepMoreOpen] = useState<number | null>(null);
+  const [stepMorePos, setStepMorePos] = useState<{ top: number; left: number } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ phaseIdx: number; value: string } | null>(null);
+  const phaseScrollRef = useRef<HTMLDivElement | null>(null);
+  const [phasesHover, setPhasesHover] = useState(false);
+  const [phasesOverflow, setPhasesOverflow] = useState(false);
+  const [phasesCollapsed, setPhasesCollapsed] = useState(false);
+  useEffect(() => {
+    const el = phaseScrollRef.current;
+    if (!el) return;
+    const check = () => setPhasesOverflow(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener("scroll", check);
+    return () => { ro.disconnect(); el.removeEventListener("scroll", check); };
+  }, [phases.length]);
+
+  const activeResource = activeRes.phaseIdx === -1 
+    ? ({ 
+        id: "lesson-plan", name: "教案", type: "教案", 
+        tags: ["教案"], summary: "教学流程、讲义等其他内容",
+        toc: ["生活情境导入", "教学要点", "常见误区", "课堂小结"],
+        sections: [
+          { heading: "一、生活情境导入", body: "【教师话术】同学们，请观察这张图：梯子斜靠在墙上，离墙 6 米，梯子长 10 米，问梯子顶端离地多高？——引出本节课题。" },
+          { heading: "二、教学要点", body: "强调「直角三角形」是前提条件，非直角不成立；区分「斜边 c」与「直角边 a / b」，避免符号混淆；公式 a² + b² = c² 中，c 永远是斜边；常见勾股数：3-4-5、5-12-13、8-15-17、7-24-25。" },
+          { heading: "三、常见误区", body: "1) 把 c² 错位放成 a²；2) 单位忘记统一（如一边用米、一边用厘米）；3) 答题漏写「c = 6 米」。" },
+          { heading: "四、课堂小结", body: "本节课主要学习了勾股定理的概念、公式推导及应用。请同学们课后完成习题册第 15-18 题。" },
+        ]
+      } as ClassPackageRes)
+    : resources[phases[activeRes.phaseIdx].resIdx[activeRes.resIdx]];
+  const view = activeResource;
+  const currentPhase = activeRes.phaseIdx === -1 ? undefined : phases[activeRes.phaseIdx];
+
+  const [previewFs, setPreviewFs] = useState(false);
+  const [tocPanelOpen, setTocPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (previewFs) {
+      setTocPanelOpen(false);
+    }
+  }, [previewFs]);
+
+  useEffect(() => {
+    if (!previewFs) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPreviewFs(false);
+        setTocPanelOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [previewFs]);
+
+  const tocScrollRef = useRef<HTMLDivElement | null>(null);
+  const [tocOverflow, setTocOverflow] = useState(false);
+  useEffect(() => {
+    const el = tocScrollRef.current;
+    if (!el) return;
+    const check = () => setTocOverflow(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener("scroll", check);
+    return () => { ro.disconnect(); el.removeEventListener("scroll", check); };
+  }, [tocPanelOpen, previewFs]);
+
+  const scrollPhasesBy = (dir: 1 | -1) => {
+    const el = phaseScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(280, el.clientWidth * 0.7), behavior: "smooth" });
+  };
+
+  const scrollTocBy = (dir: 1 | -1) => {
+    const el = tocScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(280, el.clientWidth * 0.7), behavior: "smooth" });
+  };
+
+  function reorderSteps(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    setPhases(prev => {
+      const next = prev.slice();
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next.map((p, i) => ({ ...p, num: i + 1 }));
+    });
+    toastInfo("排序已完成");
+  }
+
+  function moveResource(fromPhaseIdx: number, fromResIdx: number, toPhaseIdx: number, toResIdx: number) {
+    if (fromPhaseIdx === toPhaseIdx && fromResIdx === toResIdx) return;
+    setPhases(prev => {
+      const next = prev.map(p => ({ ...p, resIdx: p.resIdx.slice() }));
+      const [moved] = next[fromPhaseIdx].resIdx.splice(fromResIdx, 1);
+      next[toPhaseIdx].resIdx.splice(toResIdx, 0, moved);
+      return next;
+    });
+    toastInfo("排序已完成");
+  }
+
+  function deleteStep(phaseIdx: number) {
+    const p = phases[phaseIdx];
+    if (!p) return;
+    setPhases(prev => prev.filter((_, i) => i !== phaseIdx).map((ph, i) => ({ ...ph, num: i + 1 })));
+    toastInfo(`已删除步骤「${p.title}」（演示）`);
+  }
+
+  function renameStep(phaseIdx: number, newTitle: string) {
+    if (!newTitle.trim()) return;
+    setPhases(prev => prev.map((p, i) => i === phaseIdx ? { ...p, title: newTitle.trim() } : p));
+    toastInfo(`已重命名为「${newTitle.trim()}」（演示）`);
+  }
+
+  function deleteResource(phaseIdx: number, resIdx: number) {
+    const p = phases[phaseIdx];
+    if (!p) return;
+    const resourceIdx = p.resIdx[resIdx];
+    const resource = resources[resourceIdx];
+    setPhases(prev => {
+      const next = prev.map(p => ({ ...p, resIdx: p.resIdx.slice() }));
+      next[phaseIdx].resIdx.splice(resIdx, 1);
+      return next;
+    });
+    toastInfo(`已删除资源「${resource?.name || '未知'}」`);
+  }
+
+  useEffect(() => {
+    if (stepMoreOpen === null) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest?.("[data-step-more]")) setStepMoreOpen(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [stepMoreOpen]);
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: tk.bgPrimary, overflow: "hidden" }}>
+      {!phasesCollapsed && (
+        <div style={{ flexShrink: 0, position: "relative", background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}` }}>
+        <div ref={phaseScrollRef} className="hide-scrollbar" style={{
+          display: "flex", gap: 8, overflowX: "auto", padding: "8px",
+          scrollbarWidth: "none", msOverflowStyle: "none",
+          paddingRight: phasesOverflow ? 96 : 64,
+          paddingLeft: phasesOverflow ? 32 : 0,
+        }}>
+          <div
+            onClick={() => { setActiveRes({ phaseIdx: -1, resIdx: 0 }); setPageIndex(0); }}
+            style={{
+              flex: "0 0 auto", cursor: "pointer",
+              display: "flex", flexDirection: "column",
+              background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+              borderRadius: 4, height: 100,
+            }}
+          >
+            <div style={{
+              background: tk.bgPrimary, padding: "4px 8px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: "2px 2px 0 0",
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 400, color: tk.textPlaceholder }}>教案</span>
+            </div>
+            <div style={{
+              display: "flex", padding: 8, gap: 8,
+              borderTop: `1px solid ${tk.borderHairline}`,
+              height: "calc(100% - 30px)",
+            }}>
+              <div style={{
+                width: 100, height: 56, borderRadius: 4,
+                background: activeRes.phaseIdx === -1 ? tk.bgBrandSubtle : tk.bgWhite,
+                border: activeRes.phaseIdx === -1 ? `2px solid ${tk.brandDefault}` : `1px solid ${tk.borderHairline}`,
+                position: "relative", overflow: "hidden",
+              }}>
+                <img
+                  src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=lesson%20plan%20document%20preview%20education%20classroom%20clean%20minimal&image_size=square"
+                  alt="教案"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {phases.map((p, pi) => {
+            const isCurrentPhase = activeRes.phaseIdx === pi;
+            const phaseResources = p.resIdx.map(idx => resources[idx]);
+            const isStepDragging = dragInfo?.kind === "step" && dragInfo.fromIdx === pi;
+            const isStepDragOver = dropTarget?.kind === "step" && dropTarget.idx === pi;
+            const isStepDragOverLeft = isStepDragOver && dropTarget?.edge === "left";
+            const isStepDragOverRight = isStepDragOver && dropTarget?.edge === "right";
+            return (
+              <div
+                key={p.num}
+                draggable={pi > 0}
+                onDragStart={() => {
+                  if (pi > 0) {
+                    setDragInfo({ kind: "step", fromIdx: pi });
+                  }
+                }}
+                onDragOver={(e) => {
+                  if (dragInfo?.kind !== "step") {
+                    e.stopPropagation();
+                    return;
+                  }
+                  e.preventDefault();
+                  if (pi > 0) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const edge = e.clientX < rect.left + rect.width / 2 ? "left" : "right";
+                    setDropTarget({ kind: "step", idx: pi, edge });
+                  }
+                }}
+                onDrop={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (dragInfo?.kind === "step" && dragInfo.fromIdx !== pi && pi > 0 && dropTarget?.kind === "step") {
+                    const toIdx = dropTarget.edge === "left" ? pi : pi + (dragInfo.fromIdx < pi ? 0 : -1);
+                    reorderSteps(dragInfo.fromIdx, Math.max(1, toIdx));
+                  }
+                  if (dragInfo?.kind !== "step") {
+                    setDragInfo(null);
+                    setDropTarget(null);
+                  }
+                }}
+                onDragEnd={() => {
+                  setDragInfo(null);
+                  setDropTarget(null);
+                }}
+                style={{
+                  flex: "0 0 auto",
+                  display: "flex", flexDirection: "column",
+                  background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                  borderRadius: 4, height: 100,
+                  opacity: isStepDragging ? 0.5 : 1,
+                  cursor: pi > 0 ? "grab" : "default",
+                  position: "relative",
+                }}
+              >
+                {isStepDragOverLeft && (
+                  <div style={{
+                    position: "absolute", left: -6, top: 0, bottom: 0,
+                    width: 6, background: tk.brandDefault,
+                    borderRadius: 3, zIndex: 5,
+                    boxShadow: `0 0 8px ${tk.brandDefault}`,
+                  }} />
+                )}
+                {isStepDragOverRight && (
+                  <div style={{
+                    position: "absolute", right: -6, top: 0, bottom: 0,
+                    width: 6, background: tk.brandDefault,
+                    borderRadius: 3, zIndex: 5,
+                    boxShadow: `0 0 8px ${tk.brandDefault}`,
+                  }} />
+                )}
+                <div style={{
+                  background: tk.bgPrimary, padding: "4px 8px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  borderRadius: "2px 2px 0 0",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, color: tk.textPlaceholder,
+                      width: 16, height: 16, borderRadius: "50%",
+                      background: tk.bgSecondary, display: "flex",
+                      alignItems: "center", justifyContent: "center",
+                    }}>{p.num}</span>
+                    <span style={{ fontSize: 12, fontWeight: 400, color: tk.textPlaceholder }}>
+                      {p.title}：{p.subtitle}（{p.duration}）
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStepMoreOpen(stepMoreOpen === pi ? null : pi);
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setStepMorePos({ top: rect.bottom + 4, left: rect.left - 40 });
+                    }}
+                    style={{
+                      background: tk.bgSecondary, border: "none", cursor: "pointer",
+                      padding: "4px 6px", borderRadius: 2,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: tk.textPlaceholder,
+                    }}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+                </div>
+                <div style={{
+                  display: "flex", padding: 8, gap: 8,
+                  borderTop: `1px solid ${tk.borderHairline}`,
+                  height: "calc(100% - 30px)",
+                  overflowX: "auto",
+                }}>
+                  {phaseResources.length === 0 ? (
+                    <div style={{
+                      flex: "0 0 auto",
+                      width: 100, height: 56, borderRadius: 4,
+                      background: tk.bgWhite, border: `1px dashed ${tk.borderDefault}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer",
+                    }} onClick={() => toastInfo("点击添加资源颗粒（演示）")}>
+                      <Plus size={20} style={{ color: tk.textPlaceholder }} />
+                    </div>
+                  ) : (
+                    phaseResources.map((res, ri) => {
+                      const isCurrent = isCurrentPhase && activeRes.resIdx === ri;
+                      const isHovered = hoveredRes?.phaseIdx === pi && hoveredRes?.resIdx === ri;
+                      const isDragging = dragInfo?.kind === "res" && dragInfo.fromPhaseIdx === pi && dragInfo.fromResIdx === ri;
+                      const isResDragOverLeft = dropTarget?.kind === "res" && dropTarget.phaseIdx === pi && dropTarget.resIdx === ri && dropTarget.edge === "left";
+                      const isResDragOverRight = dropTarget?.kind === "res" && dropTarget.phaseIdx === pi && dropTarget.resIdx === ri && dropTarget.edge === "right";
+                      return (
+                        <div
+                          key={res.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragInfo({ kind: "res", fromPhaseIdx: pi, fromResIdx: ri });
+                          }}
+                          onDragOver={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const edge = e.clientX < rect.left + rect.width / 2 ? "left" : "right";
+                            setDropTarget({ kind: "res", phaseIdx: pi, resIdx: ri, edge });
+                          }}
+                          onDrop={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            if (dragInfo?.kind === "res") {
+                              const sourcePhaseIdx = dragInfo.fromPhaseIdx;
+                              const sourceResIdx = dragInfo.fromResIdx;
+                              const targetPhaseIdx = pi;
+                              const dropEdge = dropTarget?.edge || "left";
+                              let targetResIdx = ri;
+                              if (dropEdge === "right") {
+                                targetResIdx = ri + 1;
+                              }
+                              setPhases(prevPhases => {
+                                const newPhases = prevPhases.map(p => ({ ...p, resIdx: [...p.resIdx] }));
+                                const sourceResId = newPhases[sourcePhaseIdx].resIdx.splice(sourceResIdx, 1)[0];
+                                if (sourcePhaseIdx === targetPhaseIdx && sourceResIdx < targetResIdx) {
+                                  targetResIdx -= 1;
+                                }
+                                newPhases[targetPhaseIdx].resIdx.splice(targetResIdx, 0, sourceResId);
+                                return newPhases;
+                              });
+                              toastInfo("排序已完成");
+                            }
+                            setDragInfo(null);
+                            setDropTarget(null);
+                          }}
+                          onDragEnd={() => {
+                            setDragInfo(null);
+                            setDropTarget(null);
+                          }}
+                          onClick={() => { 
+                    setActiveRes({ phaseIdx: pi, resIdx: ri }); 
+                    setPageIndex(0); 
+                  }}
+                          onMouseEnter={() => setHoveredRes({ phaseIdx: pi, resIdx: ri })}
+                          onMouseLeave={() => setHoveredRes(null)}
+                          style={{
+                            flex: "0 0 auto", cursor: "pointer",
+                            width: 100, height: 56, borderRadius: 4,
+                            border: isCurrent ? `2px solid ${tk.brandDefault}` : isDragging ? `2px solid ${tk.brandDefault}` : `1px solid ${tk.borderHairline}`,
+                            position: "relative", overflow: "hidden",
+                            opacity: isDragging ? 0.5 : 1,
+                            boxShadow: isDragging ? "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.06)" : isCurrent ? `0 0 8px ${tk.brandDefault}` : "none",
+                          }}
+                        >
+                          {isResDragOverLeft && (
+                            <div style={{
+                              position: "absolute", left: -6, top: 0, bottom: 0,
+                              width: 6, background: tk.brandDefault,
+                              borderRadius: 3, zIndex: 5,
+                              boxShadow: `0 0 8px ${tk.brandDefault}`,
+                            }} />
+                          )}
+                          {isResDragOverRight && (
+                            <div style={{
+                              position: "absolute", right: -6, top: 0, bottom: 0,
+                              width: 6, background: tk.brandDefault,
+                              borderRadius: 3, zIndex: 5,
+                              boxShadow: `0 0 8px ${tk.brandDefault}`,
+                            }} />
+                          )}
+                          {res.type === "PPT" && res.pages && res.pages[0]?.image && (
+                            <img src={res.pages[0].image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          )}
+                          {res.type === "图片" && res.images && res.images[0]?.url && (
+                            <img src={res.images[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          )}
+                          {res.type === "视频" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=video%20playback%20interface%20education%20classroom%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {res.type === "网页" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=web%20page%20interface%20education%20tool%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {res.type === "教案" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=document%20lesson%20plan%20education%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {res.type === "练习" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=quiz%20question%20education%20test%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {res.type === "作业" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=homework%20assignment%20education%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {res.type === "音频" && (
+                            <img
+                              src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=audio%20player%20interface%20education%20preview&image_size=square"
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                          {(isHovered || isCurrent) && (
+                            <div style={{
+                              position: "absolute", bottom: 0, left: 0, right: 0,
+                              background: "rgba(0,0,0,0.7)",
+                              padding: "4px 6px",
+                              borderRadius: "0 0 4px 4px",
+                            }}>
+                              <span style={{ fontSize: 12, color: "#fff", fontWeight: 400, textAlign: "center", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{res.name}</span>
+                            </div>
+                          )}
+                          {isHovered && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteResource(pi, ri); }}
+                              style={{
+                                position: "absolute", top: 4, right: 4,
+                                width: 20, height: 20,
+                                background: "rgba(0,0,0,0.7)",
+                                border: "none", borderRadius: "50%",
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                color: "#fff",
+                              }}
+                              title="删除"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => {
+            setPhases(prev => {
+              const newPhases = [...prev, {
+                num: prev.length + 1,
+                title: "新阶段",
+                subtitle: "自定义阶段",
+                duration: "约5分",
+                resIdx: [],
+              }];
+              setTimeout(() => {
+                if (phaseScrollRef.current) {
+                  phaseScrollRef.current.scrollTo({ left: phaseScrollRef.current.scrollWidth, behavior: "smooth" });
+                }
+              }, 100);
+              return newPhases;
+            });
+            toastInfo("已添加新阶段");
+          }}
+          style={{
+            position: "absolute", right: 0, top: 0, bottom: 0,
+            zIndex: 10, width: 32,
+            background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+            borderLeft: "none",
+            cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "-2px 0px 4px 0px rgba(0,0,0,0.04)",
+            color: tk.textPlaceholder,
+          }}
+          title="添加阶段"
+        >
+          <Plus size={14} />
+        </button>
+
+        {phasesOverflow && (
+          <>
+            <button
+              onClick={() => scrollPhasesBy(-1)}
+              style={{
+                position: "absolute", left: 0, top: 0, bottom: 0,
+                zIndex: 10, width: 32,
+                background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                borderRight: "none",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "-2px 0px 4px 0px rgba(0,0,0,0.04)",
+              }}
+            >
+              <ChevronLeft size={14} style={{ color: tk.textSecondary }} />
+            </button>
+            <button
+              onClick={() => scrollPhasesBy(1)}
+              style={{
+                position: "absolute", right: 32, top: 0, bottom: 0,
+                zIndex: 10, width: 32,
+                background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                borderLeft: "none",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "-2px 0px 4px 0px rgba(0,0,0,0.04)",
+              }}
+            >
+              <ChevronRight size={14} style={{ color: tk.textSecondary }} />
+            </button>
+          </>
+        )}
+
+        {stepMoreOpen !== null && stepMorePos && (
+          <div
+            data-step-more
+            style={{
+              position: "fixed", top: stepMorePos.top, left: stepMorePos.left,
+              minWidth: 100, zIndex: 30,
+              background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+              borderRadius: tk.radiusMd, boxShadow: tk.shadowLg,
+              padding: 4, display: "flex", flexDirection: "column", gap: 1,
+            }}
+          >
+            <button
+              onClick={() => {
+                const p = phases[stepMoreOpen];
+                if (p) {
+                  setRenameTarget({ phaseIdx: stepMoreOpen, value: p.title });
+                }
+                setStepMoreOpen(null);
+              }}
+              style={{
+                background: "none", border: "none", padding: "6px 10px",
+                fontSize: 12, color: tk.textPrimary, textAlign: "left",
+                cursor: "pointer", borderRadius: tk.radiusSm,
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <Edit3 size={12} /> 重命名
+            </button>
+            <button
+              onClick={() => {
+                deleteStep(stepMoreOpen);
+                setStepMoreOpen(null);
+              }}
+              style={{
+                background: "none", border: "none", padding: "6px 10px",
+                fontSize: 12, color: tk.textError, textAlign: "left",
+                cursor: "pointer", borderRadius: tk.radiusSm,
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <Trash2 size={12} /> 删除
+            </button>
+          </div>
+        )}
+        </div>
+      )}
+
+    <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0, background: tk.bgPrimary, padding: 16 }}>
+      <div style={{ flex: rightPanelCollapsed ? 1 : 3, background: tk.bgWhite, overflow: "hidden", minWidth: 0, position: "relative", borderRadius: 8 }}>
+        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", gap: 4 }}>
+          <button onClick={() => setPreviewFs(true)} title="全屏" style={{
+            background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+            borderRadius: tk.radiusSm, padding: "4px 6px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 28, height: 28,
+          }}>
+            <Maximize2 size={14} style={{ color: tk.textSecondary }} />
+          </button>
+          <button onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)} title={rightPanelCollapsed ? "展开资源信息" : "收起资源信息"} style={{
+            background: rightPanelCollapsed ? tk.bgWhite : tk.bgBrandSubtle,
+            border: rightPanelCollapsed ? `1px solid ${tk.borderDefault}` : `1px solid ${tk.borderBrand}`,
+            borderRadius: tk.radiusSm, padding: "4px 6px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 28, height: 28,
+            transition: "0.12s",
+          }}>
+            <ClipboardList size={14} style={{ color: rightPanelCollapsed ? tk.textSecondary : tk.textBrand }} />
+          </button>
+        </div>
+        <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {activeRes.phaseIdx === -1 ? (
+            <div style={{ padding: tk.spacingLg }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
+              <div style={{ fontSize: 13, color: tk.textSecondary, lineHeight: "1.8" }}>
+                {view.sections?.map((section, si) => (
+                  <div key={si} style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
+                    <div>{section.body}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            renderResourceContent(view, pageIndex, setPageIndex, "light", false)
+          )}
+        </div>
+      </div>
+
+      {!rightPanelCollapsed && (
+        <div style={{ flex: 1, background: tk.bgPrimary, flexShrink: 0, overflowY: "auto", padding: 0, marginLeft: 12 }}>
+          <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, border: "1px solid " + tk.borderHairline, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid " + tk.borderHairline }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary }}>资源信息</span>
+              <button onClick={() => setRightPanelCollapsed(true)} title="收起资源信息" style={{
+                background: tk.bgPrimary, border: "none", cursor: "pointer",
+                padding: "4px 6px", borderRadius: tk.radiusSm,
+                width: 24, height: 24,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <X size={14} style={{ color: tk.textSecondary }} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: tk.spacingMd }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: tk.spacingMd }}>
+                {activeRes.phaseIdx === -1 ? (
+                  <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                    <div style={{ fontSize: 12, color: tk.textSecondary, lineHeight: "1.6" }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>类型</div>
+                        <div>教案</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>描述</div>
+                        <div>教学流程、讲义等其他内容</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: tk.spacingMd }}>
+                    {(() => {
+                      const phase = phases[activeRes.phaseIdx];
+                      const globalIdx = phase?.resIdx[activeRes.resIdx];
+                      const resource = globalIdx !== undefined ? resources[globalIdx] : null;
+                      if (!resource) return null;
+                      return (
+                        <>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <span style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary }}>{resource.name}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <Info size={12} style={{ color: tk.textPlaceholder }} />
+                              <span style={{ fontSize: 12, color: tk.textPlaceholder }}>此模块内容授课时不显示</span>
+                            </div>
+                          </div>
+
+                          <div style={{ background: tk.bgPrimary, borderRadius: tk.radiusMd, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: tk.textPlaceholder }}>讲授时间建议</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: tk.textPrimary }}>{phase?.duration || "—"}</span>
+                          </div>
+
+                          <div style={{ background: tk.bgPrimary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>资源简介</div>
+                            <div style={{ fontSize: 14, color: tk.textSecondary, lineHeight: 1.6 }}>{resource.summary}</div>
+                            {resource.tags && resource.tags.length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                                {resource.tags.map((tag, ti) => (
+                                  <span key={ti} style={{ fontSize: 12, fontWeight: 600, color: tk.textSecondary, background: tk.bgSecondary, padding: "4px 10px", borderRadius: tk.radiusSm }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ background: tk.bgPrimary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>讲授备注</div>
+                            <div style={{ fontSize: 14, color: tk.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                              {resource.teachingNotes}
+                            </div>
+                          </div>
+
+                          {resource.attachments && resource.attachments.length > 0 && (
+                            <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>附件</div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {resource.attachments.map((att, ati) => (
+                                  <div key={ati} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <div style={{ width: 24, height: 24, borderRadius: tk.radiusSm, background: tk.bgPrimary, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                      <FileText size={12} />
+                                    </div>
+                                    <div>
+                                      <div style={{ fontSize: 12, color: tk.textPrimary }}>{att.name}</div>
+                                      <div style={{ fontSize: 10, color: tk.textPlaceholder }}>{att.size}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+      {previewFs && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: tk.bgPrimary, display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => setTocPanelOpen(!tocPanelOpen)} style={{
+                background: tocPanelOpen ? tk.bgBrandSubtle : tk.bgWhite,
+                border: tocPanelOpen ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderDefault}`,
+                color: tocPanelOpen ? tk.textBrand : tk.textSecondary,
+                padding: "6px 12px", borderRadius: tk.radiusSm, fontSize: 12,
+                cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <List size={14} /> 目录
+              </button>
+              <div style={{ fontSize: 12, color: tk.textSecondary }}>
+                {currentPhase?.title} · {activeResource.name}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)} title={rightPanelCollapsed ? "展开资源信息" : "收起资源信息"} style={{
+                background: rightPanelCollapsed ? tk.bgWhite : tk.bgBrandSubtle,
+                border: rightPanelCollapsed ? `1px solid ${tk.borderDefault}` : `1px solid ${tk.borderBrand}`,
+                color: rightPanelCollapsed ? tk.textSecondary : tk.textBrand,
+                padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <ClipboardList size={14} />
+              </button>
+              <button onClick={() => {
+                if (activeRes.resIdx > 0) {
+                  switchResource(activeRes.phaseIdx, activeRes.resIdx - 1);
+                } else if (activeRes.phaseIdx > 0) {
+                  const prevPhase = phases[activeRes.phaseIdx - 1];
+                  switchResource(activeRes.phaseIdx - 1, prevPhase.resIdx.length - 1);
+                }
+              }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }} title="上一资源">
+                <ChevronLeft size={16} />
+              </button>
+              <button onClick={() => {
+                const currentPhaseRes = phases[activeRes.phaseIdx];
+                if (activeRes.resIdx < currentPhaseRes.resIdx.length - 1) {
+                  switchResource(activeRes.phaseIdx, activeRes.resIdx + 1);
+                } else if (activeRes.phaseIdx < phases.length - 1) {
+                  switchResource(activeRes.phaseIdx + 1, 0);
+                }
+              }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }} title="下一资源">
+                <ChevronRight size={16} />
+              </button>
+              <button onClick={() => { setPreviewFs(false); setTocPanelOpen(false); }} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                color: tk.textSecondary, padding: "6px 12px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <X size={14} /> 退出全屏
+              </button>
+            </div>
+          </div>
+
+          {tocPanelOpen && (
+            <div style={{ padding: "12px 0", background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}`, position: "relative" }}>
+              {tocOverflow && (
+                <>
+                  <button onClick={() => scrollTocBy(-1)} style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0, zIndex: 5,
+                    width: 40, background: "linear-gradient(to right, rgba(255,255,255,0.9), transparent)",
+                    border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronLeft size={16} style={{ color: tk.textSecondary }} />
+                  </button>
+                  <button onClick={() => scrollTocBy(1)} style={{
+                    position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 5,
+                    width: 40, background: "linear-gradient(to left, rgba(255,255,255,0.9), transparent)",
+                    border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronRight size={16} style={{ color: tk.textSecondary }} />
+                  </button>
+                </>
+              )}
+              <div ref={tocScrollRef} className="hide-scrollbar" style={{
+                display: "flex", gap: 8, overflowX: "auto", padding: "0 48px",
+                scrollbarWidth: "none", msOverflowStyle: "none",
+              }}>
+                {phases.map((p, pi) => (
+                  <div key={p.num} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ fontSize: 11, color: tk.textPlaceholder, paddingLeft: 4 }}>
+                      {p.title}：{p.subtitle}
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {p.resIdx.map((ridx, ri) => {
+                        const res = resources[ridx];
+                        const isCurrent = activeRes.phaseIdx === pi && activeRes.resIdx === ri;
+                        return (
+                          <div
+                            key={res.id}
+                            onClick={() => { switchResource(pi, ri); setTocPanelOpen(false); }}
+                            style={{
+                              width: 110, height: 64, borderRadius: 4,
+                              border: isCurrent ? `2px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                              background: isCurrent ? tk.bgBrandSubtle : tk.bgWhite,
+                              cursor: "pointer", position: "relative", overflow: "hidden",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {res.type === "PPT" && res.pages && res.pages[0]?.image && (
+                              <img src={res.pages[0].image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "图片" && res.images && res.images[0]?.url && (
+                              <img src={res.images[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "视频" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=video%20playback%20interface%20education%20classroom%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "练习" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=quiz%20question%20education%20test%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "作业" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=homework%20assignment%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "教案" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=document%20lesson%20plan%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "网页" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=web%20page%20interface%20education%20tool%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            {res.type === "音频" && (
+                              <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=audio%20player%20interface%20education%20preview&image_size=square" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isCurrent ? 1 : 0.7 }} />
+                            )}
+                            <div style={{
+                              position: "absolute", bottom: 0, left: 0, right: 0,
+                              background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)",
+                              padding: "4px 6px",
+                            }}>
+                              <span style={{ fontSize: 10, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{res.name}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0, background: tk.bgPrimary, padding: 16 }}>
+            <div style={{ flex: rightPanelCollapsed ? 1 : 3, background: tk.bgWhite, overflow: "hidden", minWidth: 0, position: "relative", borderRadius: 8 }}>
+              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                {activeRes.phaseIdx === -1 ? (
+                  <div style={{ padding: tk.spacingLg }}>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
+                    <div style={{ fontSize: 13, color: tk.textSecondary, lineHeight: "1.8" }}>
+                      {view.sections?.map((section, si) => (
+                        <div key={si} style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
+                          <div>{section.body}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  renderResourceContent(view, pageIndex, setPageIndex, "light", false)
+                )}
+              </div>
+            </div>
+
+            {!rightPanelCollapsed && (
+              <div style={{ flex: 1, background: tk.bgPrimary, flexShrink: 0, overflowY: "auto", padding: 0, marginLeft: 12 }}>
+                <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, border: "1px solid " + tk.borderHairline, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid " + tk.borderHairline }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: tk.textPrimary }}>资源信息</span>
+                    <button onClick={() => setRightPanelCollapsed(true)} title="收起资源信息" style={{
+                      background: tk.bgPrimary, border: "none", cursor: "pointer",
+                      padding: "4px 6px", borderRadius: tk.radiusSm,
+                      width: 24, height: 24,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <X size={14} style={{ color: tk.textSecondary }} />
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto", padding: tk.spacingMd }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: tk.spacingMd }}>
+                      {activeRes.phaseIdx === -1 ? (
+                        <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                          <div style={{ fontSize: 12, color: tk.textSecondary, lineHeight: "1.6" }}>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>类型</div>
+                              <div>教案</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>描述</div>
+                              <div>教学流程、讲义等其他内容</div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ background: tk.bgSecondary, borderRadius: tk.radiusMd, padding: tk.spacingMd }}>
+                            <div style={{ fontSize: 12, color: tk.textSecondary, lineHeight: "1.6" }}>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>资源名称</div>
+                                <div style={{ fontWeight: 600, color: tk.textPrimary }}>{activeResource.name}</div>
+                              </div>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>资源类型</div>
+                                <div>{activeResource.type}</div>
+                              </div>
+                              {activeResource.summary && (
+                                <div>
+                                  <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 2 }}>简介</div>
+                                  <div>{activeResource.summary}</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {(activeResource.tags && activeResource.tags.length > 0) && (
+                            <div>
+                              <div style={{ fontSize: 11, color: tk.textPlaceholder, marginBottom: 8 }}>标签</div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {activeResource.tags.map((tag, ti) => (
+                                  <span key={ti} style={{
+                                    fontSize: 11, color: tk.textSecondary,
+                                    background: tk.bgBrandSubtle, padding: "2px 8px",
+                                    borderRadius: tk.radiusSm,
+                                  }}>{tag}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {renameTarget && (
+        <div
+          onClick={() => setRenameTarget(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1100,
+            background: "rgba(0,0,0,0.35)", display: "flex",
+            alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: tk.bgWhite, borderRadius: tk.radiusMd, boxShadow: tk.shadowLg,
+              padding: 18, width: 360, display: "flex", flexDirection: "column", gap: 12,
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary }}>重命名步骤</div>
+            <input
+              autoFocus
+              value={renameTarget.value}
+              onChange={e => setRenameTarget({ ...renameTarget, value: e.target.value })}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  renameStep(renameTarget.phaseIdx, renameTarget.value);
+                  setRenameTarget(null);
+                } else if (e.key === "Escape") {
+                  setRenameTarget(null);
+                }
+              }}
+              style={{
+                width: "100%", boxSizing: "border-box", fontSize: 13,
+                color: tk.textPrimary, border: `1px solid ${tk.borderBrand}`,
+                borderRadius: tk.radiusSm, padding: "6px 10px", outline: "none",
+                fontFamily: "var(--font-family)",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setRenameTarget(null)}
+                style={{
+                  background: tk.bgWhite, border: `1px solid ${tk.borderDefault}`,
+                  color: tk.textSecondary, fontSize: 12, padding: "5px 14px",
+                  borderRadius: tk.radiusSm, cursor: "pointer",
+                }}
+              >取消</button>
+              <button
+                onClick={() => {
+                  renameStep(renameTarget.phaseIdx, renameTarget.value);
+                  setRenameTarget(null);
+                }}
+                style={{
+                  background: tk.bgBrandDefault, border: `1px solid ${tk.brandDefault}`,
+                  color: tk.textReverse, fontSize: 12, padding: "5px 14px",
+                  borderRadius: tk.radiusSm, cursor: "pointer", fontWeight: 500,
+                }}
+              >确定</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AssetPreviewModal({ asset, onClose }: { asset: Asset; onClose: () => void }) {
+  const [showShareConfirm, setShowShareConfirm] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const handleShare = () => {
+    setShowShareConfirm(true);
+  };
+
+  const confirmShare = () => {
+    toastInfo(asset.isShared ? "资源已取消共享" : "资源已共享至myTa资源推荐区");
+    setShowShareConfirm(false);
+  };
+
+  const isPkg = asset.resource.type === "pkg";
+
+  const shareStatusText = asset.isShared 
+    ? "本资产已共享，本校所有教师均可见" 
+    : "本资产未共享，仅个人可见";
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={onClose}>
+      <div style={{
+        background: tk.bgWhite, borderRadius: isFullScreen ? 0 : tk.radiusLg,
+        width: isFullScreen ? "100%" : "90%",
+        maxWidth: isFullScreen ? "100%" : "1400px",
+        height: isFullScreen ? "100%" : "90%",
+        boxShadow: tk.shadowLg, display: "flex", flexDirection: "column",
+        overflow: "hidden",
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{
+          background: tk.bgWhite,
+          borderBottom: `1px solid ${tk.borderHairline}`,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${tk.spacingSm} ${tk.spacingMd}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: tk.textSecondary,
+                background: tk.bgSecondary, padding: "2px 8px",
+                borderRadius: tk.radiusSm,
+              }}>{asset.category}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: tk.textPrimary }}>{asset.title}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button onClick={() => setShowMoreMenu(!showMoreMenu)} style={{
+                background: tk.bgWhite, border: "none",
+                padding: "4px 8px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <MoreHorizontal size={14} />
+              </button>
+              <button onClick={() => toastInfo("分享链接（演示）")} style={{
+                background: tk.bgWhite, border: "none",
+                padding: "4px 8px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <Share2 size={14} />
+              </button>
+              <button onClick={() => setShowDirectory(!showDirectory)} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                padding: "4px 8px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <List size={14} />
+              </button>
+              <button onClick={() => setIsFullScreen(!isFullScreen)} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                padding: "4px 8px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <Maximize2 size={14} />
+              </button>
+              <button onClick={() => toastInfo("继续调整（打开myta）")} style={{
+                background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                padding: "4px 12px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+              }}>
+                继续调整
+              </button>
+              <button onClick={handleShare} style={{
+                background: asset.isShared ? tk.bgWarningSubtle : tk.bgBrandSubtle,
+                border: `1px solid ${asset.isShared ? tk.borderWarning : tk.borderBrand}`,
+                padding: "4px 12px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer",
+                color: asset.isShared ? tk.textWarning : tk.textBrand,
+                fontWeight: 500,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <Share2 size={14} /> {asset.isShared ? "取消共享" : "共享"}
+              </button>
+              <button onClick={onClose} style={{
+                background: tk.bgWhite, border: "none",
+                padding: "4px", borderRadius: tk.radiusSm,
+                fontSize: 12, cursor: "pointer", color: tk.textSecondary,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", padding: `${tk.spacingXs} ${tk.spacingMd}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: tk.textBrand,
+                background: tk.bgBrandSubtle, padding: "1px 5px",
+                borderRadius: tk.radiusXs,
+              }}>{asset.subject}</span>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: tk.textBrand,
+                background: tk.bgBrandSubtle, padding: "1px 5px",
+                borderRadius: tk.radiusXs,
+              }}>{asset.grade}</span>
+              <span style={{ fontSize: 12, color: tk.textPlaceholder }}>{asset.updateTime}</span>
+            </div>
+            <div style={{ flex: 1 }}></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{
+                fontSize: 11, color: asset.isShared ? tk.textSuccess : tk.textWarning,
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                <Lock size={10} />
+                {shareStatusText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {isPkg && asset.resource.pkg && (
+            <ClassPackageViewer pkg={asset.resource.pkg} mode="preview" />
+          )}
+          {!isPkg && (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: tk.bgPrimary }}>
+              <div style={{ textAlign: "center", padding: tk.spacingXl }}>
+                {asset.resource.type === "doc" && (
+                  <><FileText size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <div style={{ fontSize: 14, color: tk.textPlaceholder }}>文档课件预览</div></>
+                )}
+                {asset.resource.type === "video" && (
+                  <><Video size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <div style={{ fontSize: 14, color: tk.textPlaceholder }}>视频预览</div></>
+                )}
+                {asset.resource.type === "exercise" && (
+                  <><ClipboardList size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <div style={{ fontSize: 14, color: tk.textPlaceholder }}>习题作业预览</div></>
+                )}
+                {asset.resource.type === "app" && (
+                  <><Play size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <div style={{ fontSize: 14, color: tk.textPlaceholder }}>教学应用预览</div></>
+                )}
+                {asset.resource.type === "other" && (
+                  <><FileText size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <div style={{ fontSize: 14, color: tk.textPlaceholder }}>其他资源预览</div></>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showShareConfirm && (
+          <div style={{
+            position: "absolute", right: 16, top: 80, zIndex: 10,
+            background: tk.bgWhite, borderRadius: tk.radiusMd,
+            border: `1px solid ${tk.borderDefault}`, boxShadow: tk.shadowMd,
+            padding: "12px 16px", minWidth: 240,
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 13, color: tk.textPrimary, marginBottom: 10 }}>
+              {asset.isShared ? "确认取消共享？" : "确认共享至myTa资源推荐区？"}
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowShareConfirm(false)} style={{
+                padding: "4px 12px", fontSize: 12, color: tk.textSecondary,
+                background: tk.bgPrimary, border: "none", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }}>取消</button>
+              <button onClick={confirmShare} style={{
+                padding: "4px 12px", fontSize: 12, color: tk.textReverse,
+                background: tk.brandDefault, border: "none", borderRadius: tk.radiusSm,
+                cursor: "pointer",
+              }}>确认</button>
+            </div>
+          </div>
+        )}
+
+        {showMoreMenu && (
+          <div style={{
+            position: "absolute", right: 80, top: 44, zIndex: 10,
+            background: tk.bgWhite, borderRadius: tk.radiusMd,
+            border: `1px solid ${tk.borderHairline}`, boxShadow: tk.shadowLg,
+            minWidth: 120, overflow: "hidden",
+          }} onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => { toastInfo("重命名（演示）"); setShowMoreMenu(false); }} style={{
+              width: "100%", background: "transparent", border: "none",
+              padding: "8px 16px", cursor: "pointer", textAlign: "left",
+              fontSize: 13, color: tk.textPrimary, fontWeight: 400,
+              transition: "all 0.1s",
+            }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              重命名
+            </button>
+            <button onClick={() => { toastInfo("删除（演示）"); setShowMoreMenu(false); }} style={{
+              width: "100%", background: "transparent", border: "none",
+              padding: "8px 16px", cursor: "pointer", textAlign: "left",
+              fontSize: 13, color: tk.textError, fontWeight: 400,
+              transition: "all 0.1s",
+            }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              删除
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResourceLibrary({ onNavigate }: { onNavigate: (m: Module) => void }) {
-  const [activeTab, setActiveTab] = useState(0);
-  const [activeType, setActiveType] = useState<ResourceType>("全部");
+  const [assets, setAssets] = useState<Asset[]>(MY_ASSETS);
+  const [activeCategory, setActiveCategory] = useState<string>("全部");
   const [selectedGrade, setSelectedGrade] = useState("全部");
   const [selectedSubject, setSelectedSubject] = useState("全部");
   const [searchText, setSearchText] = useState("");
-  const [showMyProvided, setShowMyProvided] = useState(false);
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-  const [actionMenu, setActionMenu] = useState<{ resourceId: number; x: number; y: number } | null>(null);
-  const [confirmTip, setConfirmTip] = useState<{ resourceId: number; x: number; y: number; type: "sync" | "withdraw" | "delete" } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [schoolResources, setSchoolResources] = useState<ResourceItem[]>(SCHOOL_RESOURCES);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [hoveredAsset, setHoveredAsset] = useState<number | null>(null);
+  const [showShareConfirm, setShowShareConfirm] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [showMoreMenu, setShowMoreMenu] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
 
-  const tabs = ["我的资源", "校本资源", "推荐资源"];
+  const categories = ["全部", "课堂包", "教学应用", "习题作业", "文档课件", "视频", "其他"];
+  const subjects = ["全部", "语文", "数学", "英语", "物理", "化学", "生物", "历史", "地理", "政治"];
+  const grades = ["全部", "一年级", "二年级", "三年级", "四年级", "五年级", "六年级", "初一", "初二", "初三", "高一", "高二", "高三"];
 
-  const currentResources = activeTab === 0 ? PERSONAL_RESOURCES : activeTab === 1 ? schoolResources : RECOMMENDED_RESOURCES;
-
-  const allFilteredResources = currentResources.filter(r => {
-    if (activeType !== "全部" && r.type !== activeType) return false;
-    if (selectedGrade !== "全部" && r.grade !== selectedGrade) return false;
-    if (selectedSubject !== "全部" && r.subject !== selectedSubject) return false;
-    if (searchText && !r.name.includes(searchText)) return false;
-    if (activeTab === 1 && r.reviewStatus !== "approved") return false;
-    if (activeTab === 1 && showMyProvided && !r.isMine) return false;
+  const filteredAssets = assets.filter(a => {
+    if (activeCategory !== "全部" && a.category !== activeCategory) return false;
+    if (selectedGrade !== "全部" && a.grade !== selectedGrade) return false;
+    if (selectedSubject !== "全部" && a.subject !== selectedSubject) return false;
+    if (searchText && !a.title.includes(searchText)) return false;
     return true;
   }).sort((a, b) => {
-    const timeA = new Date(a.uploadTime).getTime();
-    const timeB = new Date(b.uploadTime).getTime();
-    return sortOrder === "desc" ? timeB - timeA : timeA - timeB;
+    return new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime();
   });
 
-  const totalPages = Math.ceil(allFilteredResources.length / pageSize);
-  const filteredResources = allFilteredResources.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const groupedAssets = filteredAssets.reduce((acc, asset) => {
+    const date = new Date(asset.updateTime);
+    const key = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(asset);
+    return acc;
+  }, {} as Record<string, Asset[]>);
 
-  const getStatusLabel = (status: ReviewStatus) => {
-    switch (status) {
-      case "pending": return "审核中";
-      case "approved": return "已通过";
-      case "rejected": return "不通过";
-    }
-  };
+  const sortedGroups = Object.keys(groupedAssets).sort((a, b) => b.localeCompare(a));
 
-  const getStatusColor = (status: ReviewStatus) => {
-    switch (status) {
-      case "pending": return tk.textWarning;
-      case "approved": return tk.textSuccess;
-      case "rejected": return tk.textError;
-    }
-  };
+  const assetCount = assets.length;
+  const mytaTaskCount = 12;
+  const sharedCount = assets.filter(a => a.isShared).length;
 
-  const getStatusBg = (status: ReviewStatus) => {
-    switch (status) {
-      case "pending": return tk.bgWarningSubtle;
-      case "approved": return tk.bgSuccessSubtle;
-      case "rejected": return tk.bgErrorSubtle;
-    }
-  };
-
-  const getPreciseAction = (type: ResourceType) => {
-    switch (type) {
-      case "作业习题": return { label: "下发", action: () => toast("已下发作业") };
-      case "课堂包": return { label: "生成课堂", action: () => toast("正在生成课堂...") };
-      case "教学应用": return { label: "使用", action: () => toast("正在打开应用...") };
-      case "视频":
-      case "文档课件":
-      case "其他":
-      default: return { label: "下载", action: () => toast("开始下载...") };
-    }
-  };
-
-  const handleActionClick = (e: React.MouseEvent, resourceId: number) => {
+  const handleShareClick = (e: React.MouseEvent, asset: Asset) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setActionMenu({ resourceId, x: rect.left, y: rect.bottom + 4 });
+    setShowShareConfirm({ id: asset.id, x: rect.left, y: rect.bottom + 4 });
+  };
+
+  const confirmShare = (assetId: number) => {
+    setAssets(prev => prev.map(a => {
+      if (a.id === assetId) {
+        const newStatus = !a.isShared;
+        if (newStatus) {
+          toastInfo("资源已共享至myTa资源推荐区");
+        } else {
+          toastInfo("资源已取消共享");
+        }
+        return { ...a, isShared: newStatus };
+      }
+      return a;
+    }));
+    setShowShareConfirm(null);
+  };
+
+  const handleMoreClick = (e: React.MouseEvent, asset: Asset) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setShowMoreMenu({ id: asset.id, x: rect.left, y: rect.bottom + 4 });
   };
 
   const handleDocumentClick = () => {
-    setActionMenu(null);
-    setNotificationsOpen(false);
+    setShowShareConfirm(null);
+    setShowMoreMenu(null);
+    setShowSubjectDropdown(false);
+    setShowGradeDropdown(false);
   };
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }} onClick={handleDocumentClick}>
-      {/* Top Header with Tabs */}
       <div style={{ padding: `${tk.spacingMd} ${tk.spacingLg}`, background: tk.bgWhite, borderBottom: `1px solid ${tk.borderHairline}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 4, background: tk.bgPrimary, padding: 4, borderRadius: tk.radiusMd }}>
-          {tabs.map((t, i) => (
-            <button key={t} onClick={() => setActiveTab(i)} style={{
-              background: i === activeTab ? tk.bgWhite : "transparent",
-              color: i === activeTab ? tk.textPrimary : tk.textSecondary,
-              border: "none", borderRadius: tk.radiusSm,
-              fontSize: 14, fontWeight: i === activeTab ? 600 : 400,
-              padding: "6px 20px", cursor: "pointer", transition: "all 0.12s",
-              boxShadow: i === activeTab ? tk.shadowSm : "none",
-            }}>{t}</button>
-          ))}
-        </div>
-        {/* MyTA Quick Button */}
+        <div style={{ fontSize: 18, fontWeight: 600, color: tk.textPrimary }}>我的资产</div>
         <button onClick={() => onNavigate("myta")} style={{
           display: "flex", alignItems: "center", gap: 4,
           background: tk.brandDefault, color: tk.textReverse,
@@ -9419,306 +11090,227 @@ function ResourceLibrary({ onNavigate }: { onNavigate: (m: Module) => void }) {
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div style={{ padding: `${tk.spacingMd} ${tk.spacingLg}`, background: tk.bgPrimary, borderBottom: `1px solid ${tk.borderHairline}`, display: "flex", alignItems: "center", gap: tk.spacingMd, flexWrap: "wrap" }}>
-        {/* Type Tags */}
-        <div style={{ display: "flex", gap: tk.spacingXs }}>
-          {RESOURCE_TYPES.map(t => (
-            <button key={t} onClick={() => setActiveType(t)} style={{
-              padding: "3px 11px", borderRadius: tk.radiusFull,
-              background: t === activeType ? tk.bgBrandSubtle : tk.bgWhite,
-              color: t === activeType ? tk.textBrand : tk.textSecondary,
-              border: `1px solid ${t === activeType ? tk.borderBrand : tk.borderHairline}`,
-              fontSize: 12, cursor: "pointer", transition: "all 0.12s",
-              fontWeight: t === activeType ? 600 : 400,
-            }}>{t}</button>
-          ))}
-        </div>
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }}></div>
-
-        {/* Right Group: Subject, Grade, Search */}
-        <div style={{ display: "flex", alignItems: "center", gap: tk.spacingMd }}>
-          {/* Subject Dropdown */}
-          <div style={{ position: "relative" }}>
-            <button onClick={(e) => e.stopPropagation()} style={{
-              padding: "4px 10px", borderRadius: tk.radiusFull,
-              background: tk.bgWhite, color: tk.textSecondary,
-              border: `1px solid ${tk.borderHairline}`,
-              fontSize: 12, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 4,
-            }}>
-              学科
-              <ChevronDown size={10} />
-            </button>
+      <div style={{ padding: `${tk.spacingMd} ${tk.spacingLg}`, background: tk.bgPrimary }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: tk.spacingMd, marginBottom: tk.spacingMd }}>
+          <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, padding: `${tk.spacingMd} ${tk.spacingLg}`, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <span style={{ fontSize: 28, fontWeight: 600, color: tk.textPrimary }}>{assetCount}</span>
+            <span style={{ fontSize: 12, color: tk.textPlaceholder, marginTop: 4 }}>资产总数</span>
           </div>
-
-          {/* Grade Dropdown */}
-          <div style={{ position: "relative" }}>
-            <button onClick={(e) => e.stopPropagation()} style={{
-              padding: "4px 10px", borderRadius: tk.radiusFull,
-              background: tk.bgWhite, color: tk.textSecondary,
-              border: `1px solid ${tk.borderHairline}`,
-              fontSize: 12, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 4,
-            }}>
-              年级
-              <ChevronDown size={10} />
-            </button>
+          <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, padding: `${tk.spacingMd} ${tk.spacingLg}`, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <span style={{ fontSize: 28, fontWeight: 600, color: tk.textPrimary }}>{mytaTaskCount}</span>
+            <span style={{ fontSize: 12, color: tk.textPlaceholder, marginTop: 4 }}>MyTA任务数</span>
           </div>
-
-          {/* Search */}
-          <div style={{ background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`, borderRadius: tk.radiusSm, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6, minWidth: 180 }}>
-            <Search size={12} style={{ color: tk.textPlaceholder, flexShrink: 0 }} />
-            <input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="搜索资源名称…" style={{
-              border: "none", background: "transparent", outline: "none",
-              fontSize: 12, color: tk.textPrimary, width: "100%",
-            }} />
+          <div style={{ background: tk.bgWhite, borderRadius: tk.radiusMd, padding: `${tk.spacingMd} ${tk.spacingLg}`, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <span style={{ fontSize: 28, fontWeight: 600, color: tk.textPrimary }}>{sharedCount}</span>
+            <span style={{ fontSize: 12, color: tk.textPlaceholder, marginTop: 4 }}>已共享资产</span>
           </div>
         </div>
 
-        {/* My Provided Checkbox */}
-        {activeTab === 1 && (
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: tk.textSecondary }}>
-            <input type="checkbox" checked={showMyProvided} onChange={(e) => setShowMyProvided(e.target.checked)} style={{ cursor: "pointer" }} />
-            我提供的
-          </label>
+        <div style={{ display: "flex", alignItems: "center", gap: tk.spacingMd, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: tk.spacingXs }}>
+            {categories.map(c => (
+              <button key={c} onClick={() => setActiveCategory(c)} style={{
+                padding: "3px 11px", borderRadius: tk.radiusFull,
+                background: c === activeCategory ? tk.bgBrandSubtle : tk.bgWhite,
+                color: c === activeCategory ? tk.textBrand : tk.textSecondary,
+                border: `1px solid ${c === activeCategory ? tk.borderBrand : tk.borderHairline}`,
+                fontSize: 12, cursor: "pointer", transition: "all 0.12s",
+                fontWeight: c === activeCategory ? 600 : 400,
+              }}>{c}</button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1 }}></div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: tk.spacingMd }}>
+            <div style={{ position: "relative" }}>
+              <button onClick={(e) => { e.stopPropagation(); setShowSubjectDropdown(!showSubjectDropdown); setShowGradeDropdown(false); }} style={{
+                padding: "4px 10px", borderRadius: tk.radiusFull,
+                background: tk.bgWhite, color: tk.textSecondary,
+                border: `1px solid ${tk.borderHairline}`,
+                fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                {selectedSubject === "全部" ? "学科" : selectedSubject}
+                <ChevronDown size={10} />
+              </button>
+              {showSubjectDropdown && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, zIndex: 100,
+                  background: tk.bgWhite, borderRadius: tk.radiusSm,
+                  border: `1px solid ${tk.borderHairline}`, boxShadow: tk.shadowMd,
+                  minWidth: 100, marginTop: 4,
+                }} onClick={(e) => e.stopPropagation()}>
+                  {subjects.map(s => (
+                    <button key={s} onClick={() => { setSelectedSubject(s); setShowSubjectDropdown(false); }} style={{
+                      width: "100%", padding: "6px 12px", textAlign: "left",
+                      background: s === selectedSubject ? tk.bgBrandSubtle : "transparent",
+                      color: s === selectedSubject ? tk.textBrand : tk.textPrimary,
+                      border: "none", fontSize: 12, cursor: "pointer",
+                    }}>{s}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: "relative" }}>
+              <button onClick={(e) => { e.stopPropagation(); setShowGradeDropdown(!showGradeDropdown); setShowSubjectDropdown(false); }} style={{
+                padding: "4px 10px", borderRadius: tk.radiusFull,
+                background: tk.bgWhite, color: tk.textSecondary,
+                border: `1px solid ${tk.borderHairline}`,
+                fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+              }}>
+                {selectedGrade === "全部" ? "年级" : selectedGrade}
+                <ChevronDown size={10} />
+              </button>
+              {showGradeDropdown && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, zIndex: 100,
+                  background: tk.bgWhite, borderRadius: tk.radiusSm,
+                  border: `1px solid ${tk.borderHairline}`, boxShadow: tk.shadowMd,
+                  minWidth: 100, marginTop: 4,
+                }} onClick={(e) => e.stopPropagation()}>
+                  {grades.map(g => (
+                    <button key={g} onClick={() => { setSelectedGrade(g); setShowGradeDropdown(false); }} style={{
+                      width: "100%", padding: "6px 12px", textAlign: "left",
+                      background: g === selectedGrade ? tk.bgBrandSubtle : "transparent",
+                      color: g === selectedGrade ? tk.textBrand : tk.textPrimary,
+                      border: "none", fontSize: 12, cursor: "pointer",
+                    }}>{g}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`, borderRadius: tk.radiusSm, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6, minWidth: 180 }}>
+              <Search size={12} style={{ color: tk.textPlaceholder, flexShrink: 0 }} />
+              <input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="搜索资源名称…" style={{
+                border: "none", background: "transparent", outline: "none",
+                fontSize: 12, color: tk.textPrimary, width: "100%",
+              }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", background: tk.bgPrimary, padding: `${tk.spacingMd} ${tk.spacingLg}` }}>
+        {filteredAssets.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "64px 0" }}>
+            <FileText size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
+            <div style={{ fontSize: 14, color: tk.textPlaceholder }}>暂无符合条件的资产</div>
+          </div>
+        ) : (
+          <div>
+            {sortedGroups.map(groupKey => (
+              <div key={groupKey} style={{ marginBottom: tk.spacingMd }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: tk.textSecondary, marginBottom: tk.spacingSm }}>
+                  {groupKey}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: tk.spacingSm }}>
+                  {groupedAssets[groupKey].map(asset => (
+                    <div
+                      key={asset.id}
+                      onClick={() => setPreviewAsset(asset)}
+                      onMouseEnter={() => setHoveredAsset(asset.id)}
+                      onMouseLeave={() => setHoveredAsset(null)}
+                      style={{
+                        background: tk.bgWhite, borderRadius: tk.radiusMd,
+                        border: `1px solid ${tk.borderHairline}`,
+                        overflow: "hidden", cursor: "pointer",
+                        transition: "all 0.15s",
+                        boxShadow: hoveredAsset === asset.id ? tk.shadowMd : "none",
+                      }}
+                    >
+                      <div style={{ position: "relative", height: 140, overflow: "hidden" }}>
+                        <img
+                          src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(asset.title + " education")}&image_size=landscape_4_3`}
+                          alt={asset.title}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.2s", transform: hoveredAsset === asset.id ? "scale(1.05)" : "scale(1)" }}
+                        />
+                        <div style={{ position: "absolute", top: 6, left: 6, display: "flex", gap: 3 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, color: tk.textBrand,
+                            background: "rgba(255,255,255,0.95)", padding: "2px 6px",
+                            borderRadius: tk.radiusXs,
+                          }}>{asset.subject}</span>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, color: tk.textBrand,
+                            background: "rgba(255,255,255,0.95)", padding: "2px 6px",
+                            borderRadius: tk.radiusXs,
+                          }}>{asset.grade}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: tk.spacingSm }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, color: tk.textBrand,
+                            background: tk.bgBrandSubtle, padding: "1px 5px",
+                            borderRadius: tk.radiusXs,
+                          }}>{asset.category}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: tk.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+                            {asset.title}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 11, color: tk.textPlaceholder, display: "flex", alignItems: "center", gap: 3 }}>
+                            <Clock size={10} />
+                            {asset.updateTime}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {hoveredAsset === asset.id && (
+                              <button onClick={(e) => handleMoreClick(e, asset)} style={{
+                                background: "transparent", border: "none",
+                                cursor: "pointer", padding: "2px 4px",
+                                borderRadius: tk.radiusXs,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                color: tk.textPlaceholder,
+                              }} title="更多">
+                                <MoreHorizontal size={12} />
+                              </button>
+                            )}
+                            <button onClick={(e) => handleShareClick(e, asset)} style={{
+                              background: asset.isShared ? tk.bgSuccessSubtle : tk.bgBrandSubtle,
+                              border: `1px solid ${asset.isShared ? tk.borderSuccess : tk.borderBrand}`,
+                              cursor: "pointer", padding: "3px 8px",
+                              borderRadius: tk.radiusXs,
+                              fontSize: 11,
+                              color: asset.isShared ? tk.textSuccess : tk.textBrand,
+                              fontWeight: 500,
+                            }}>
+                              {asset.isShared ? "已共享" : "共享"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Resource Table */}
-      <div style={{ flex: 1, overflowY: "auto", background: tk.bgWhite }}>
-        {/* 审核通知条 */}
-        {activeTab === 1 && (() => {
-          const pendingCount = SCHOOL_RESOURCES.filter(r => r.isMine && r.reviewStatus === "pending").length;
-          if (pendingCount === 0) return null;
-          return (
-            <div style={{
-              padding: "10px 24px", background: tk.bgWarningSubtle,
-              borderBottom: `1px solid ${tk.borderHairline}`,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <Info size={14} style={{ color: tk.textWarning, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: tk.textWarning }}>
-                有{pendingCount}条资源同步正在审核中，审核通过后将展示在此
-              </span>
-            </div>
-          );
-        })()}
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ position: "sticky", top: 0, background: tk.bgWhite, zIndex: 10 }}>
-            <tr style={{ borderBottom: `2px solid ${tk.borderDefault}` }}>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>资源名</th>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>资源类型</th>
-              {activeTab !== 0 && <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>作者</th>}
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>上传时间</th>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>年级</th>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>学科</th>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>
-                <button onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")} style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  fontSize: 12, fontWeight: 600, color: tk.textSecondary,
-                  display: "flex", alignItems: "center", gap: 4,
-                }}>
-                  浏览时间
-                  {sortOrder === "desc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                </button>
-              </th>
-              <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: tk.textSecondary, whiteSpace: "nowrap" }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredResources.length === 0 ? (
-              <tr>
-                <td colSpan={activeTab === 0 ? 7 : 8} style={{ padding: "48px", textAlign: "center", color: tk.textPlaceholder }}>
-                  <FileText size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
-                  <div style={{ fontSize: 14 }}>暂无符合条件的资源</div>
-                </td>
-              </tr>
-            ) : (
-              filteredResources.map(r => (
-                <tr key={r.id} style={{ borderBottom: `1px solid ${tk.borderHairline}`, transition: "background 0.12s" }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ padding: "14px 24px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: tk.textPrimary }}>{r.name}</div>
-                    {activeTab === 1 && r.isMine && (
-                      <div style={{ fontSize: 12, color: tk.textPlaceholder, marginTop: 2 }}>由我提供</div>
-                    )}
-                  </td>
-                  <td style={{ padding: "14px 24px" }}>
-                    <span style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px", borderRadius: tk.radiusFull, background: tk.bgSecondary, color: tk.textSecondary }}>
-                      {r.type}
-                    </span>
-                  </td>
-                  {activeTab !== 0 && <td style={{ padding: "14px 24px", fontSize: 13, color: tk.textSecondary }}>{r.author}</td>}
-                  <td style={{ padding: "14px 24px", fontSize: 13, color: tk.textSecondary }}>{r.uploadTime}</td>
-                  <td style={{ padding: "14px 24px", fontSize: 13, color: tk.textSecondary }}>{r.grade}</td>
-                  <td style={{ padding: "14px 24px", fontSize: 13, color: tk.textSecondary }}>{r.subject}</td>
-                  <td style={{ padding: "14px 24px", fontSize: 13, color: tk.textSecondary }}>{r.uploadTime.split(" ")[0]}</td>
-                  <td style={{ padding: "14px 24px", whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      {/* 精准操作 */}
-                      <button onClick={(e) => { e.stopPropagation(); getPreciseAction(r.type).action(); }} style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        fontSize: 12, color: tk.textBrand, fontWeight: 500,
-                      }}>{getPreciseAction(r.type).label}</button>
-                      {/* 我的资源：同步至校本资源 */}
-                      {activeTab === 0 && (
-                        <button onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setConfirmTip({ resourceId: r.id, x: rect.left, y: rect.bottom + 4, type: "sync" });
-                        }} style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          fontSize: 12, color: tk.textBrand, fontWeight: 500,
-                        }}>同步至校本资源</button>
-                      )}
-                      {/* 校本资源（由我提供）：撤出 */}
-                      {activeTab === 1 && r.isMine && (
-                        <button onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setConfirmTip({ resourceId: r.id, x: rect.left, y: rect.bottom + 4, type: "withdraw" });
-                        }} style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          fontSize: 12, color: tk.textBrand, fontWeight: 500,
-                        }}>撤出</button>
-                      )}
-                      {/* ...更多操作 */}
-                      <button onClick={(e) => handleActionClick(e, r.id)} style={{
-                        display: "flex", alignItems: "center",
-                        background: "none", border: "none", cursor: "pointer",
-                        fontSize: 12, color: tk.textSecondary,
-                      }}>
-                        <MoreHorizontal size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ padding: "16px 24px", background: tk.bgWhite, borderTop: `1px solid ${tk.borderHairline}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{
-            padding: "4px 10px", border: `1px solid ${tk.borderHairline}`, borderRadius: tk.radiusSm,
-            background: tk.bgWhite, color: currentPage === 1 ? tk.textPlaceholder : tk.textSecondary,
-            cursor: currentPage === 1 ? "not-allowed" : "pointer", fontSize: 12,
-          }}>上一页</button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            const startPage = Math.max(1, currentPage - 2);
-            const pageNum = startPage + i;
-            if (pageNum > totalPages) return null;
-            return (
-              <button key={pageNum} onClick={() => setCurrentPage(pageNum)} style={{
-                width: 32, height: 32, border: pageNum === currentPage ? `1px solid ${tk.brandDefault}` : `1px solid ${tk.borderHairline}`,
-                borderRadius: tk.radiusSm, background: pageNum === currentPage ? tk.bgBrandSubtle : tk.bgWhite,
-                color: pageNum === currentPage ? tk.textBrand : tk.textSecondary,
-                cursor: "pointer", fontSize: 12, fontWeight: pageNum === currentPage ? 600 : 400,
-              }}>{pageNum}</button>
-            );
-          })}
-          {totalPages > 5 && currentPage < totalPages - 2 && <span style={{ fontSize: 12, color: tk.textPlaceholder }}>...</span>}
-          {totalPages > 5 && currentPage < totalPages - 1 && (
-            <button onClick={() => setCurrentPage(totalPages)} style={{
-              width: 32, height: 32, border: `1px solid ${tk.borderHairline}`, borderRadius: tk.radiusSm,
-              background: tk.bgWhite, color: tk.textSecondary, cursor: "pointer", fontSize: 12,
-            }}>{totalPages}</button>
-          )}
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{
-            padding: "4px 10px", border: `1px solid ${tk.borderHairline}`, borderRadius: tk.radiusSm,
-            background: tk.bgWhite, color: currentPage === totalPages ? tk.textPlaceholder : tk.textSecondary,
-            cursor: currentPage === totalPages ? "not-allowed" : "pointer", fontSize: 12,
-          }}>下一页</button>
-          <span style={{ fontSize: 12, color: tk.textPlaceholder, marginLeft: 8 }}>
-            共 {totalPages} 页
-          </span>
-        </div>
-      )}
-
-      {/* Action Menu */}
-      {actionMenu && (() => {
-        const resource = currentResources.find(r => r.id === actionMenu.resourceId);
-        if (!resource) return null;
-        let actions: { label: string; color: string; onClick: () => void }[] = [];
-        if (activeTab === 0) {
-          actions = [
-            { label: "重命名", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "分享", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "下载", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "复制", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "删除", color: tk.textError, onClick: () => { setActionMenu(null); setDeleteConfirm(resource.id); } },
-          ];
-        } else if (activeTab === 1) {
-          actions = [
-            { label: "分享", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "复制", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-          ];
-        } else {
-          actions = [
-            { label: "分享", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "下载", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-            { label: "复制", color: tk.textPrimary, onClick: () => setActionMenu(null) },
-          ];
-        }
-        return (
-          <div style={{
-            position: "fixed", left: actionMenu.x, top: actionMenu.y, zIndex: 500,
-            background: tk.bgWhite, borderRadius: tk.radiusMd,
-            border: `1px solid ${tk.borderHairline}`, boxShadow: tk.shadowLg,
-            minWidth: 160, overflow: "hidden",
-          }} onClick={(e) => e.stopPropagation()}>
-            {actions.map((item) => (
-              <button key={item.label} onClick={item.onClick} style={{
-                width: "100%", background: "transparent", border: "none",
-                padding: "8px 16px", cursor: "pointer", textAlign: "left",
-                fontSize: 13, color: item.color, fontWeight: 400,
-                transition: "all 0.1s",
-              }} onMouseEnter={e => {
-                e.currentTarget.style.background = tk.bgPrimary;
-                if (item.color === tk.textError) e.currentTarget.style.color = tk.textError;
-              }} onMouseLeave={e => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = item.color;
-              }}>
-                {item.label}
-              </button>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* Confirm Tip */}
-      {confirmTip && (
+      {showShareConfirm && (
         <div style={{
-          position: "fixed", left: confirmTip.x, top: confirmTip.y, zIndex: 600,
+          position: "fixed", left: showShareConfirm.x, top: showShareConfirm.y, zIndex: 600,
           background: tk.bgWhite, borderRadius: tk.radiusMd,
           border: `1px solid ${tk.borderDefault}`, boxShadow: tk.shadowMd,
           padding: "12px 16px", minWidth: 200,
         }} onClick={(e) => e.stopPropagation()}>
           <div style={{ fontSize: 13, color: tk.textPrimary, marginBottom: 10 }}>
-            {confirmTip.type === "sync" && "确认同步至校本资源？"}
-            {confirmTip.type === "withdraw" && "确认撤出校本资源？"}
+            {assets.find(a => a.id === showShareConfirm.id)?.isShared ? "确认取消共享？" : "确认共享至myTa资源推荐区？"}
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button onClick={() => setConfirmTip(null)} style={{
+            <button onClick={() => setShowShareConfirm(null)} style={{
               padding: "4px 12px", fontSize: 12, color: tk.textSecondary,
               background: tk.bgPrimary, border: "none", borderRadius: tk.radiusSm,
               cursor: "pointer",
             }}>取消</button>
-            <button onClick={() => {
-              if (confirmTip.type === "sync") {
-                toastInfo("此资源审核通过后展示在校本资源");
-              } else if (confirmTip.type === "withdraw") {
-                setSchoolResources(s => s.filter(r => r.id !== confirmTip?.resourceId));
-                toastInfo("此资源已撤出校本资源");
-              }
-              setConfirmTip(null);
-            }} style={{
+            <button onClick={() => confirmShare(showShareConfirm.id)} style={{
               padding: "4px 12px", fontSize: 12, color: tk.textReverse,
               background: tk.brandDefault, border: "none", borderRadius: tk.radiusSm,
               cursor: "pointer",
@@ -9727,37 +11319,42 @@ function ResourceLibrary({ onNavigate }: { onNavigate: (m: Module) => void }) {
         </div>
       )}
 
-      {/* Delete Confirm Modal */}
-      {deleteConfirm && (
+      {showMoreMenu && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 1000,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }} onClick={() => setDeleteConfirm(null)}>
-          <div style={{
-            background: tk.bgWhite, borderRadius: tk.radiusLg,
-            padding: "24px", minWidth: 320,
-            boxShadow: tk.shadowLg,
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>确认删除</div>
-            <div style={{ fontSize: 14, color: tk.textSecondary, marginBottom: 20 }}>删除后无法恢复，确定要删除吗？</div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-              <button onClick={() => setDeleteConfirm(null)} style={{
-                padding: "6px 16px", fontSize: 13, color: tk.textSecondary,
-                background: tk.bgPrimary, border: "none", borderRadius: tk.radiusSm,
-                cursor: "pointer",
-              }}>取消</button>
-              <button onClick={() => {
-                setDeleteConfirm(null);
-                toastInfo("此资源已删除");
-              }} style={{
-                padding: "6px 16px", fontSize: 13, color: tk.textReverse,
-                background: tk.errorDefault, border: "none", borderRadius: tk.radiusSm,
-                cursor: "pointer",
-              }}>删除</button>
-            </div>
-          </div>
+          position: "fixed", left: showMoreMenu.x, top: showMoreMenu.y, zIndex: 500,
+          background: tk.bgWhite, borderRadius: tk.radiusMd,
+          border: `1px solid ${tk.borderHairline}`, boxShadow: tk.shadowLg,
+          minWidth: 120, overflow: "hidden",
+        }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => { toastInfo("重命名（演示）"); setShowMoreMenu(null); }} style={{
+            width: "100%", background: "transparent", border: "none",
+            padding: "8px 16px", cursor: "pointer", textAlign: "left",
+            fontSize: 13, color: tk.textPrimary, fontWeight: 400,
+            transition: "all 0.1s",
+          }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            重命名
+          </button>
+          <button onClick={() => { onNavigate("myta"); setShowMoreMenu(null); }} style={{
+            width: "100%", background: "transparent", border: "none",
+            padding: "8px 16px", cursor: "pointer", textAlign: "left",
+            fontSize: 13, color: tk.textPrimary, fontWeight: 400,
+            transition: "all 0.1s",
+          }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            继续调整
+          </button>
+          <button onClick={() => { toastInfo("资产已删除"); setShowMoreMenu(null); }} style={{
+            width: "100%", background: "transparent", border: "none",
+            padding: "8px 16px", cursor: "pointer", textAlign: "left",
+            fontSize: 13, color: tk.textError, fontWeight: 400,
+            transition: "all 0.1s",
+          }} onMouseEnter={e => e.currentTarget.style.background = tk.bgPrimary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            删除
+          </button>
         </div>
+      )}
+
+      {previewAsset && (
+        <AssetPreviewModal asset={previewAsset} onClose={() => setPreviewAsset(null)} />
       )}
     </div>
   );
@@ -10091,7 +11688,7 @@ function TopNav({ activeModule, onNavigate, onAvatarClick }: { activeModule: Mod
           onMouseEnter={e => (e.currentTarget.style.background = tk.brandHover)}
           onMouseLeave={e => (e.currentTarget.style.background = activeModule === "resource" ? tk.brandHover : tk.brandDefault)}
         >
-          <Database size={14} /> 教师资源库
+          <Database size={14} /> 我的资产
         </button>
 
         {/* Avatar + dropdown */}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, Fragment } from "react";
+import { createPortal } from "react-dom";
 import {
   LayoutDashboard, Bot, BookOpen, Database, Bell, Search, Settings,
   ChevronRight, Plus, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, FileText, ClipboardList, BarChart2,
@@ -8,7 +9,7 @@ import {
   TrendingUp, Brain, MessageSquare, FolderOpen, Upload, Maximize2, Share2, Download,
   Moon, Sun, Loader2, Check, RefreshCw, Play, List, Edit3, Eye, Video,
   MoreHorizontal, Trash2, Minimize2, MoreVertical, PanelRight, PanelLeft, History, Globe,
-  CheckCircle, XCircle, Music, User, Lock
+  CheckCircle, XCircle, Music, User, Lock, Pencil, Pointer, MessageSquarePlus
 } from "lucide-react";
 import { HomeworkMainView, HomeworkDetailPage, HomeworkStatsPanel } from "./modules/homework";
 
@@ -86,11 +87,11 @@ type SparkTab = "classes" | "homework" | "review";
 // ─── Global Toast ──────────────────────────────────────────────────────────
 // 简易全局 toast：模块级事件 + ToastHost 订阅，避免引入 sonner 主题依赖。
 type ToastKind = "success" | "info" | "error";
-type ToastEvent = { id: number; kind: ToastKind; text: string };
-function dispatchToast(text: string, kind: ToastKind = "success") {
+type ToastEvent = { id: number; kind: ToastKind; text: string; action?: () => void; actionLabel?: string };
+function dispatchToast(text: string, kind: ToastKind = "success", action?: () => void, actionLabel?: string) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent<ToastEvent>("app:toast", {
-    detail: { id: Date.now() + Math.random(), kind, text },
+    detail: { id: Date.now() + Math.random(), kind, text, action, actionLabel },
   }));
 }
 function toast(text: string) { dispatchToast(text, "success"); }
@@ -139,6 +140,20 @@ function ToastHost() {
               textAlign: "center", fontWeight: 700, flexShrink: 0,
             }}>{it.kind === "success" ? "✓" : it.kind === "error" ? "×" : "i"}</span>
             {it.text}
+            {it.action && (
+              <button 
+                onClick={() => { it.action(); setItems(prev => prev.filter(x => x.id !== it.id)); }}
+                style={{
+                  marginLeft: "auto", padding: "4px 12px",
+                  background: c.fg, color: "#fff",
+                  border: "none", borderRadius: tk.radiusSm,
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  pointerEvents: "auto",
+                }}
+              >
+                {it.actionLabel}
+              </button>
+            )}
           </div>
         );
       })}
@@ -1226,11 +1241,13 @@ function ImageUploadZone() {
 // ─── Tall AI input box ───────────────────────────────────────────────────────
 function MyTAInputBox({
   value, onChange, onSend, placeholder, agentIdx, onAgentChange,
-  showSlotFilling, showAgentTabs,
+  showSlotFilling, showAgentTabs, selectedModules, onRemoveModule,
 }: {
   value: string; onChange: (v: string) => void; onSend: () => void;
   placeholder: string; agentIdx: number; onAgentChange: (i: number) => void;
   showSlotFilling: boolean; showAgentTabs?: boolean;
+  selectedModules?: { name: string; type: string; id: number }[];
+  onRemoveModule?: (id: number) => void;
 }) {
   const [slotClass, setSlotClass] = useState("");
   const [slotCount, setSlotCount] = useState("10");
@@ -1309,6 +1326,8 @@ function MyTAInputBox({
         </div>
       )}
 
+
+
       {/* Main input card */}
       <div style={{
         background: tk.bgWhite, borderRadius: tk.radiusLg,
@@ -1352,22 +1371,56 @@ function MyTAInputBox({
           </div>
         )}
 
-        {/* Textarea row — with image zone for 微知课 */}
+        {/* Editable content area with module chips */}
         <div style={{ display: "flex", gap: 10, padding: showAgentTabs ? "10px 14px 4px" : "8px 14px 6px", alignItems: "flex-start" }}>
           {isWeike && <ImageUploadZone />}
-          <textarea
-            value={value}
-            onChange={e => onChange(e.target.value)}
+          <div
+            contentEditable
+            onInput={e => onChange((e.target as HTMLElement).innerText)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
             placeholder={placeholder}
-            rows={isWeike ? 3 : 4}
             style={{
-              flex: 1, border: "none", outline: "none", resize: "none",
+              flex: 1, minHeight: (isWeike ? 3 : 4) * 22 + "px",
+              border: "none", outline: "none",
               background: "transparent", fontSize: 14, color: tk.textPrimary,
               lineHeight: "22px", fontFamily: "var(--font-family)",
               padding: 0, minWidth: 0,
+              whiteSpace: "pre-wrap", wordBreak: "break-word",
             }}
-          />
+            suppressContentEditableWarning={true}
+          >
+            {selectedModules && selectedModules.length > 0 && selectedModules.map(mod => (
+              <span key={mod.id} contentEditable={false} style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "2px 8px", background: tk.bgBrandSubtle,
+                borderRadius: tk.radiusFull, fontSize: 13, color: tk.textBrand,
+                marginRight: 4, cursor: "default",
+                verticalAlign: "middle",
+              }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: 3,
+                  background: tk.brandDefault, display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 600, color: tk.textReverse,
+                }}>
+                  {mod.type.charAt(0)}
+                </div>
+                {mod.name}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveModule?.(mod.id);
+                  }}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: tk.textBrand, padding: 0, marginLeft: 2,
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Bottom toolbar */}
@@ -3129,7 +3182,7 @@ function MyTAAgentWelcome({ agentIdx, onAgentChange, onSend, input, onInputChang
 }
 
 // ─── MyTA Module ─────────────────────────────────────────────────────────────
-function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
+function MyTA({ onNavigate, minimalMode, setMinimalMode }: { onNavigate: (m: Module) => void; minimalMode: boolean; setMinimalMode: (v: boolean) => void }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   // null = cold-start welcome (agent not yet picked from sidebar)
@@ -3159,6 +3212,43 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
   const [thinkingCollapsed, setThinkingCollapsed] = useState<boolean>(false);
   const [quananVersions, setQuananVersions] = useState<string[]>([]);
   const [quananActiveVersion, setQuananActiveVersion] = useState(0);
+  const [resourceDropdownOpen, setResourceDropdownOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(true);
+  const [elementSelectMode, setElementSelectMode] = useState(false);
+  const [selectedModules, setSelectedModules] = useState<{ name: string; type: string; id: number }[]>([]);
+  const handleRemoveModule = (id: number) => {
+    setSelectedModules(prev => prev.filter(m => m.id !== id));
+  };
+  const panelMinimalMode = minimalMode;
+  const setPanelMinimalMode = setMinimalMode;
+  const [editMode, setEditMode] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [panelFullscreen, setPanelFullscreen] = useState(false);
+  const [generateClassModalOpen, setGenerateClassModalOpen] = useState(false);
+  const [className, setClassName] = useState("");
+  const [activeResourceIndex, setActiveResourceIndex] = useState(0);
+
+  useEffect(() => {
+    if (!resourceDropdownOpen && !moreMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest?.("[data-resource-dropdown]")) setResourceDropdownOpen(false);
+      if (!target.closest?.("[data-more-menu]")) setMoreMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [resourceDropdownOpen, moreMenuOpen]);
+
+  const taskResources = [
+    { id: 1, name: "勾股定理的认识课堂包", type: "课堂包", subject: "数学", grade: "八年级", count: 12 },
+    { id: 2, name: "一元二次方程的解法课堂包", type: "课堂包", subject: "数学", grade: "九年级", count: 10 },
+    { id: 3, name: "Unit 4 词汇分层练习", type: "习题作业", subject: "英语", grade: "高一", count: 5 },
+    { id: 4, name: "期末家长信", type: "文档课件", subject: "语文", grade: "全部", count: 1 },
+    { id: 5, name: "勾股定理 1 分钟微课", type: "视频", subject: "数学", grade: "八年级", count: 1 },
+    { id: 6, name: "Unit 4 单元教案", type: "文档课件", subject: "英语", grade: "高一", count: 1 },
+    { id: 7, name: "期末模拟卷（数学）", type: "习题作业", subject: "数学", grade: "高三", count: 8 },
+    { id: 8, name: "学生成绩评语合集", type: "其他", subject: "全部", grade: "全部", count: 1 },
+  ];
 
   const sendFloating = () => {
     if (!input.trim()) return;
@@ -3388,12 +3478,12 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
     setCanvasLoading(false);
     // 已完成的历史项 → 直接加载课堂包到第三栏
     if (item.completed) {
-      setQuananThinking(false);
-      setQuananDone(true);
-      setQuananStepIdx(THINKING_STEPS.length);
+      setAgentThinking(false);
+      setAgentDone(true);
+      setAgentStepIdx(THINKING_STEPS.length);
       setQuananPackage(SAMPLE_PACKAGE);
     } else {
-      setQuananDone(false);
+      setAgentDone(false);
       setQuananPackage(null);
     }
   }
@@ -3444,7 +3534,7 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", position: "relative", background: tk.bgWhite }}>
       {/* ── Left Sidebar ─────────────────────────────────── */}
-      {!sidebarCollapsed && (
+      {!sidebarCollapsed && !panelMinimalMode && (
         <div style={{
           width: SIDEBAR_W, flexShrink: 0,
           borderRight: `1px solid ${tk.borderHairline}`,
@@ -3544,11 +3634,12 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
       {/* ── Center Column ──────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: tk.bgWhite, position: "relative" }}>
         {/* 顶部操作栏：仅左上保留收起侧边栏按钮，无底边线，无独立行 */}
-        <div style={{
-          padding: "8px 12px 0",
-          display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-          position: "absolute", top: 0, left: 0, zIndex: 5,
-        }}>
+        {!panelMinimalMode && (
+          <div style={{
+            padding: "8px 12px 0",
+            display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+            position: "absolute", top: 0, left: 0, zIndex: 5,
+          }}>
           {/* 收起/展开侧边栏按钮 - 左上 */}
           <button
             onClick={() => setSidebarCollapsed(c => !c)}
@@ -3567,6 +3658,7 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
             {sidebarCollapsed ? <PanelRight size={14} /> : <PanelLeft size={14} />}
           </button>
         </div>
+        )}
 
         {/* 欢迎视图内容 - 上半居中 + 下半资源板块（可滚动） */}
         {viewState === "welcome" && (
@@ -3624,6 +3716,8 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
                     }}
                     showSlotFilling={false}
                     showAgentTabs={activeAgent === null}
+                    selectedModules={selectedModules}
+                    onRemoveModule={(id) => setSelectedModules(prev => prev.filter(m => m.id !== id))}
                   />
                 </div>
               )}
@@ -3870,6 +3964,8 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
                 placeholder="继续描述你的需求…"
                 agentIdx={resolvedAgent} onAgentChange={(i) => setActiveAgent(i)}
                 showSlotFilling={showSlot}
+                selectedModules={selectedModules}
+                onRemoveModule={(id) => setSelectedModules(prev => prev.filter(m => m.id !== id))}
               />
             </div>
           </>
@@ -3917,36 +4013,243 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
               </div>
             ) : (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <div style={{ background: tk.bgWhite, padding: "12px 14px", borderBottom: `1px solid ${tk.borderHairline}`, flexShrink: 0 }}>
+                <div style={{ background: tk.bgWhite, padding: "8px 12px", borderBottom: `1px solid ${tk.borderHairline}`, flexShrink: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 4 }}>
-                        勾股定理标准课包
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                      <div style={{ position: "relative" }} data-resource-dropdown>
+                        <IconTip label="资源目录">
+                          <button onClick={() => setResourceDropdownOpen(!resourceDropdownOpen)} style={{
+                            width: 32, height: 32, borderRadius: tk.radiusSm,
+                            background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                            color: tk.textSecondary,
+                          }}>
+                            <Layers size={16} />
+                          </button>
+                        </IconTip>
+                        {resourceDropdownOpen && (
+                          <div style={{
+                            position: "absolute", top: "100%", left: 0, marginTop: 4,
+                            background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                            borderRadius: tk.radiusMd, boxShadow: tk.shadowMd,
+                            width: 280, zIndex: 100,
+                          }}>
+                            <div style={{ padding: "8px 12px", borderBottom: `1px solid ${tk.borderHairline}`, fontSize: 12, fontWeight: 600, color: tk.textPrimary }}>
+                              本任务资源（共 {taskResources.length} 个）
+                            </div>
+                            {taskResources.map((res, idx) => (
+                              <button key={res.id} onClick={() => {
+                                setActiveResourceIndex(idx);
+                                setResourceDropdownOpen(false);
+                              }} style={{
+                                width: "100%", padding: "10px 12px",
+                                border: "none", background: "transparent",
+                                cursor: "pointer", textAlign: "left",
+                                display: "flex", flexDirection: "column", gap: 4,
+                              }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{
+                                    width: 48, height: 28, borderRadius: 4,
+                                    background: tk.bgSecondary, overflow: "hidden",
+                                  }}>
+                                    <img src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(res.name + " education resource thumbnail")}&image_size=square`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 500, color: tk.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      {res.name}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                                      <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.type}</span>
+                                      <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.subject}</span>
+                                      <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.grade}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, color: tk.textPlaceholder }}>数学</span>
-                        <span style={{ fontSize: 11, color: tk.textPlaceholder }}>八年级</span>
-                        <span style={{ fontSize: 11, color: tk.textPlaceholder }}>共 {CLASS_PACKAGE_RESOURCES.length} 个资源</span>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {taskResources[activeResourceIndex]?.name || "勾股定理的认识课堂包"}
+                        </div>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 2 }}>
+                          <span style={{ fontSize: 11, color: tk.textPlaceholder }}>{taskResources[activeResourceIndex]?.subject || "数学"}</span>
+                          <span style={{ fontSize: 11, color: tk.textPlaceholder }}>{taskResources[activeResourceIndex]?.grade || "八年级"}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px", background: tk.bgSecondary, borderRadius: tk.radiusSm }}>
+                        <button onClick={() => setActiveResourceIndex(prev => Math.max(0, prev - 1))} style={{
+                          background: "transparent", border: "none", cursor: "pointer",
+                          padding: "4px 6px", borderRadius: tk.radiusXs,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <ChevronLeft size={14} style={{ color: tk.textSecondary }} />
+                        </button>
+                        <span style={{ fontSize: 11, color: tk.textPlaceholder, minWidth: 40, textAlign: "center" }}>{activeResourceIndex + 1} / {taskResources.length}</span>
+                        <button onClick={() => setActiveResourceIndex(prev => Math.min(taskResources.length - 1, prev + 1))} style={{
+                          background: "transparent", border: "none", cursor: "pointer",
+                          padding: "4px 6px", borderRadius: tk.radiusXs,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <ChevronRight size={14} style={{ color: tk.textSecondary }} />
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button onClick={() => setCanvasFullscreen(true)} style={{
-                        background: "none", border: `1px solid ${tk.borderHairline}`,
-                        borderRadius: tk.radiusSm, padding: "5px 10px",
-                        fontSize: 11, color: tk.textSecondary, cursor: "pointer",
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                      <div style={{ position: "relative" }} data-more-menu>
+                        <IconTip label="更多">
+                          <button onClick={() => setMoreMenuOpen(!moreMenuOpen)} style={{
+                            width: 28, height: 28, borderRadius: tk.radiusSm,
+                            background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                            color: tk.textSecondary,
+                          }}>
+                            <MoreHorizontal size={14} />
+                          </button>
+                        </IconTip>
+                        {moreMenuOpen && (
+                          <div style={{
+                            position: "absolute", top: "100%", right: 0, marginTop: 4,
+                            background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                            borderRadius: tk.radiusMd, boxShadow: tk.shadowMd,
+                            width: 160, zIndex: 100,
+                          }}>
+                            <button onClick={() => { toastInfo("已复制分享链接"); setMoreMenuOpen(false); }} style={{
+                              width: "100%", padding: "10px 12px",
+                              border: "none", background: "transparent",
+                              cursor: "pointer", textAlign: "left",
+                              fontSize: 12, color: tk.textPrimary,
+                              display: "flex", alignItems: "center", gap: 8,
+                            }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <Share2 size={14} /> 分享链接
+                            </button>
+                            <button onClick={() => { toastInfo("正在重新生成..."); setMoreMenuOpen(false); }} style={{
+                              width: "100%", padding: "10px 12px",
+                              border: "none", background: "transparent",
+                              cursor: "pointer", textAlign: "left",
+                              fontSize: 12, color: tk.textPrimary,
+                              display: "flex", alignItems: "center", gap: 8,
+                            }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <RefreshCw size={14} /> 重新生成
+                            </button>
+                            <button onClick={() => { toastInfo("已删除资源"); setMoreMenuOpen(false); }} style={{
+                              width: "100%", padding: "10px 12px",
+                              border: "none", background: "transparent",
+                              cursor: "pointer", textAlign: "left",
+                              fontSize: 12, color: tk.textDanger,
+                              display: "flex", alignItems: "center", gap: 8,
+                            }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <Trash2 size={14} /> 删除
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <IconTip label={tocOpen ? "关闭目录" : "目录"}>
+                        <button onClick={() => setTocOpen(!tocOpen)} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: tocOpen ? tk.bgBrandSubtle : tk.bgWhite,
+                          border: tocOpen ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: tocOpen ? tk.textBrand : tk.textSecondary,
+                        }}>
+                          <List size={14} />
+                        </button>
+                      </IconTip>
+
+                      <IconTip label={elementSelectMode ? "退出元素选择" : "元素选择"}>
+                        <button onClick={() => {
+                          const newMode = !elementSelectMode;
+                          setElementSelectMode(newMode);
+                          if (newMode) {
+                            toastInfo("已进入元素选择模式，选择模块精确调整");
+                          }
+                        }} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: elementSelectMode ? tk.bgBrandSubtle : tk.bgWhite,
+                          border: elementSelectMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: elementSelectMode ? tk.textBrand : tk.textSecondary,
+                        }}>
+                          <Pointer size={14} />
+                        </button>
+                      </IconTip>
+
+                      <IconTip label={panelMinimalMode ? "退出精简模式" : "精简模式"}>
+                        <button onClick={() => setPanelMinimalMode(!panelMinimalMode)} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: panelMinimalMode ? tk.bgBrandSubtle : tk.bgWhite,
+                          border: panelMinimalMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: panelMinimalMode ? tk.textBrand : tk.textSecondary,
+                        }}>
+                          <PanelLeft size={14} />
+                        </button>
+                      </IconTip>
+
+                      <IconTip label={editMode ? "退出编辑" : "编辑"}>
+                        <button onClick={() => setEditMode(!editMode)} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: editMode ? tk.bgBrandSubtle : tk.bgWhite,
+                          border: editMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: editMode ? tk.textBrand : tk.textSecondary,
+                        }}>
+                          <Edit3 size={14} />
+                        </button>
+                      </IconTip>
+
+                      <div style={{ width: 1, height: 20, background: tk.borderHairline, margin: "0 4px" }} />
+
+                      <button onClick={() => setGenerateClassModalOpen(true)} style={{
+                        background: tk.brandDefault, border: "none",
+                        borderRadius: tk.radiusSm, padding: "6px 12px",
+                        fontSize: 12, fontWeight: 600, color: tk.textReverse, cursor: "pointer",
                         display: "flex", alignItems: "center", gap: 4,
-                      }}><Maximize2 size={11} /> 全屏</button>
-                      <button onClick={() => setCanvasVisible(false)} style={{
-                        background: "none", border: `1px solid ${tk.borderHairline}`,
-                        borderRadius: tk.radiusSm, padding: "5px 10px",
-                        fontSize: 11, color: tk.textSecondary, cursor: "pointer",
-                        display: "flex", alignItems: "center", gap: 4,
-                      }}><X size={11} /> 关闭</button>
+                      }}>
+                        <Sparkles size={12} /> 生成课堂
+                      </button>
+
+                      <div style={{ width: 1, height: 20, background: tk.borderHairline, margin: "0 4px" }} />
+
+                      <IconTip label="全屏">
+                        <button onClick={() => setPanelFullscreen(true)} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: tk.textSecondary,
+                        }}>
+                          <Maximize2 size={14} />
+                        </button>
+                      </IconTip>
+
+                      <IconTip label="关闭">
+                        <button onClick={() => setCanvasVisible(false)} style={{
+                          width: 28, height: 28, borderRadius: tk.radiusSm,
+                          background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          color: tk.textSecondary,
+                        }}>
+                          <X size={14} />
+                        </button>
+                      </IconTip>
                     </div>
                   </div>
                 </div>
                 <div style={{ flex: 1, overflow: "hidden" }}>
-                  <ClassDetailPage cls={CLASS_DATA[0]} onTeach={() => {}} minimalMode={false} setMinimalMode={() => {}} />
+                  <ClassPackageViewer 
+                    pkg={quananPackage} 
+                    mode={editMode ? "edit" : "preview"}
+                    externalPhasesCollapsed={!tocOpen}
+                    onPhasesCollapsedChange={(collapsed) => setTocOpen(!collapsed)}
+                    onModulesChange={(mod) => setSelectedModules(prev => [...prev, mod])}
+                    elementSelectMode={elementSelectMode}
+                  />
                 </div>
               </div>
             )}
@@ -3955,13 +4258,341 @@ function MyTA({ onNavigate }: { onNavigate: (m: Module) => void }) {
       )}
 
       {/* ── Fullscreen Canvas ──────────────────────────────── */}
-      {canvasFullscreen && (
+      {panelFullscreen && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 500,
+          position: "fixed", inset: 0, zIndex: 1000,
           background: tk.bgWhite, display: "flex", flexDirection: "column",
         }}>
-          <PackageContentView pkg={SAMPLE_RESOURCES.find(r => r.kind === "package")?.pkg || SAMPLE_PACKAGE} />
+          <div style={{ background: tk.bgWhite, padding: "8px 12px", borderBottom: `1px solid ${tk.borderHairline}`, flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                <div style={{ position: "relative" }} data-resource-dropdown>
+                  <IconTip label="资源目录">
+                    <button onClick={() => setResourceDropdownOpen(!resourceDropdownOpen)} style={{
+                      width: 32, height: 32, borderRadius: tk.radiusSm,
+                      background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      color: tk.textSecondary,
+                    }}>
+                      <Layers size={16} />
+                    </button>
+                  </IconTip>
+                  {resourceDropdownOpen && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 0, marginTop: 4,
+                      background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                      borderRadius: tk.radiusMd, boxShadow: tk.shadowMd,
+                      width: 280, zIndex: 101,
+                    }}>
+                      <div style={{ padding: "8px 12px", borderBottom: `1px solid ${tk.borderHairline}`, fontSize: 12, fontWeight: 600, color: tk.textPrimary }}>
+                        本任务资源（共 {taskResources.length} 个）
+                      </div>
+                      {taskResources.map((res, idx) => (
+                        <button key={res.id} onClick={() => {
+                          setActiveResourceIndex(idx);
+                          setResourceDropdownOpen(false);
+                        }} style={{
+                          width: "100%", padding: "10px 12px",
+                          border: "none", background: "transparent",
+                          cursor: "pointer", textAlign: "left",
+                          display: "flex", flexDirection: "column", gap: 4,
+                        }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{
+                              width: 48, height: 28, borderRadius: 4,
+                              background: tk.bgSecondary, overflow: "hidden",
+                            }}>
+                              <img src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(res.name + " education resource thumbnail")}&image_size=square`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 500, color: tk.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {res.name}
+                              </div>
+                              <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                                <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.type}</span>
+                                <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.subject}</span>
+                                <span style={{ fontSize: 10, color: tk.textPlaceholder }}>{res.grade}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {taskResources[activeResourceIndex]?.name || "勾股定理的认识课堂包"}
+                  </div>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 2 }}>
+                    <span style={{ fontSize: 11, color: tk.textPlaceholder }}>{taskResources[activeResourceIndex]?.subject || "数学"}</span>
+                    <span style={{ fontSize: 11, color: tk.textPlaceholder }}>{taskResources[activeResourceIndex]?.grade || "八年级"}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px", background: tk.bgSecondary, borderRadius: tk.radiusSm }}>
+                  <button onClick={() => setActiveResourceIndex(prev => Math.max(0, prev - 1))} style={{
+                    background: "transparent", border: "none", cursor: "pointer",
+                    padding: "4px 6px", borderRadius: tk.radiusXs,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronLeft size={14} style={{ color: tk.textSecondary }} />
+                  </button>
+                  <span style={{ fontSize: 11, color: tk.textPlaceholder, minWidth: 40, textAlign: "center" }}>{activeResourceIndex + 1} / {taskResources.length}</span>
+                  <button onClick={() => setActiveResourceIndex(prev => Math.min(taskResources.length - 1, prev + 1))} style={{
+                    background: "transparent", border: "none", cursor: "pointer",
+                    padding: "4px 6px", borderRadius: tk.radiusXs,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <ChevronRight size={14} style={{ color: tk.textSecondary }} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <div style={{ position: "relative" }} data-more-menu>
+                  <IconTip label="更多">
+                    <button onClick={() => setMoreMenuOpen(!moreMenuOpen)} style={{
+                      width: 28, height: 28, borderRadius: tk.radiusSm,
+                      background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      color: tk.textSecondary,
+                    }}>
+                      <MoreHorizontal size={14} />
+                    </button>
+                  </IconTip>
+                  {moreMenuOpen && (
+                    <div style={{
+                      position: "absolute", top: "100%", right: 0, marginTop: 4,
+                      background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                      borderRadius: tk.radiusMd, boxShadow: tk.shadowMd,
+                      width: 160, zIndex: 101,
+                    }}>
+                      <button onClick={() => { toastInfo("已复制分享链接"); setMoreMenuOpen(false); }} style={{
+                        width: "100%", padding: "10px 12px",
+                        border: "none", background: "transparent",
+                        cursor: "pointer", textAlign: "left",
+                        fontSize: 12, color: tk.textPrimary,
+                        display: "flex", alignItems: "center", gap: 8,
+                      }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <Share2 size={14} /> 分享链接
+                      </button>
+                      <button onClick={() => { toastInfo("正在重新生成..."); setMoreMenuOpen(false); }} style={{
+                        width: "100%", padding: "10px 12px",
+                        border: "none", background: "transparent",
+                        cursor: "pointer", textAlign: "left",
+                        fontSize: 12, color: tk.textPrimary,
+                        display: "flex", alignItems: "center", gap: 8,
+                      }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <RefreshCw size={14} /> 重新生成
+                      </button>
+                      <button onClick={() => { toastInfo("已删除资源"); setMoreMenuOpen(false); }} style={{
+                        width: "100%", padding: "10px 12px",
+                        border: "none", background: "transparent",
+                        cursor: "pointer", textAlign: "left",
+                        fontSize: 12, color: tk.textDanger,
+                        display: "flex", alignItems: "center", gap: 8,
+                      }} onMouseEnter={e => e.currentTarget.style.background = tk.bgSecondary} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <Trash2 size={14} /> 删除
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <IconTip label={tocOpen ? "关闭目录" : "目录"}>
+                  <button onClick={() => setTocOpen(!tocOpen)} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: tocOpen ? tk.bgBrandSubtle : tk.bgWhite,
+                    border: tocOpen ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: tocOpen ? tk.textBrand : tk.textSecondary,
+                  }}>
+                    <List size={14} />
+                  </button>
+                </IconTip>
+
+                <IconTip label={elementSelectMode ? "退出元素选择" : "元素选择"}>
+                  <button onClick={() => {
+                    const newMode = !elementSelectMode;
+                    setElementSelectMode(newMode);
+                    if (newMode) {
+                      toastInfo("已进入元素选择模式，选择模块精确调整");
+                    }
+                  }} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: elementSelectMode ? tk.bgBrandSubtle : tk.bgWhite,
+                    border: elementSelectMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: elementSelectMode ? tk.textBrand : tk.textSecondary,
+                  }}>
+                    <Pointer size={14} />
+                  </button>
+                </IconTip>
+
+                <IconTip label={panelMinimalMode ? "退出精简模式" : "精简模式"}>
+                  <button onClick={() => setPanelMinimalMode(!panelMinimalMode)} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: panelMinimalMode ? tk.bgBrandSubtle : tk.bgWhite,
+                    border: panelMinimalMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: panelMinimalMode ? tk.textBrand : tk.textSecondary,
+                  }}>
+                    <PanelLeft size={14} />
+                  </button>
+                </IconTip>
+
+                <IconTip label={editMode ? "退出编辑" : "编辑"}>
+                  <button onClick={() => setEditMode(!editMode)} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: editMode ? tk.bgBrandSubtle : tk.bgWhite,
+                    border: editMode ? `1px solid ${tk.borderBrand}` : `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: editMode ? tk.textBrand : tk.textSecondary,
+                  }}>
+                    <Edit3 size={14} />
+                  </button>
+                </IconTip>
+
+                <div style={{ width: 1, height: 20, background: tk.borderHairline, margin: "0 4px" }} />
+
+                <button onClick={() => toastInfo("正在生成课堂...")} style={{
+                  background: tk.brandDefault, border: "none",
+                  borderRadius: tk.radiusSm, padding: "6px 12px",
+                  fontSize: 12, fontWeight: 600, color: tk.textReverse, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 4,
+                }}>
+                  <Sparkles size={12} /> 生成课堂
+                </button>
+
+                <div style={{ width: 1, height: 20, background: tk.borderHairline, margin: "0 4px" }} />
+
+                <IconTip label="退出全屏">
+                  <button onClick={() => setPanelFullscreen(false)} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: tk.textSecondary,
+                  }}>
+                    <Minimize2 size={14} />
+                  </button>
+                </IconTip>
+
+                <IconTip label="关闭">
+                  <button onClick={() => { setPanelFullscreen(false); setCanvasVisible(false); }} style={{
+                    width: 28, height: 28, borderRadius: tk.radiusSm,
+                    background: tk.bgWhite, border: `1px solid ${tk.borderHairline}`,
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: tk.textSecondary,
+                  }}>
+                    <X size={14} />
+                  </button>
+                </IconTip>
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <ClassPackageViewer 
+              pkg={quananPackage} 
+              mode={editMode ? "edit" : "preview"}
+              externalPhasesCollapsed={!tocOpen}
+              onPhasesCollapsedChange={(collapsed) => setTocOpen(!collapsed)}
+              onModulesChange={(mod) => setSelectedModules(prev => [...prev, mod])}
+              elementSelectMode={elementSelectMode}
+            />
+          </div>
         </div>
+      )}
+
+      {/* ── Generate Class Modal ────────────────────────────── */}
+      {generateClassModalOpen && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 2000,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }} onClick={() => setGenerateClassModalOpen(false)}>
+          <div style={{
+            background: tk.bgWhite, borderRadius: tk.radiusLg,
+            padding: "24px", width: 420, maxWidth: "90%",
+            boxShadow: tk.shadowLg,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary }}>新建课堂</div>
+              <button onClick={() => setGenerateClassModalOpen(false)} style={{
+                background: "none", border: "none", cursor: "pointer",
+                width: 28, height: 28, borderRadius: tk.radiusSm,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: tk.textPlaceholder,
+              }}>
+                <X size={14} />
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: tk.textSecondary, marginBottom: 6 }}>课堂名称</div>
+                <input 
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  placeholder="请输入课堂名称"
+                  style={{
+                    width: "100%", padding: "10px 12px",
+                    border: `1px solid ${tk.borderDefault}`, borderRadius: tk.radiusSm,
+                    fontSize: 13, color: tk.textPrimary,
+                    outline: "none", fontFamily: "inherit",
+                  }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: tk.textSecondary, marginBottom: 6 }}>关联资源</div>
+                <div style={{
+                  padding: "12px", background: tk.bgSecondary,
+                  borderRadius: tk.radiusSm, fontSize: 13, color: tk.textPrimary,
+                }}>
+                  {taskResources[activeResourceIndex]?.name || "勾股定理的认识课堂包"}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 24 }}>
+              <button onClick={() => setGenerateClassModalOpen(false)} style={{
+                padding: "8px 16px", border: `1px solid ${tk.borderDefault}`,
+                borderRadius: tk.radiusSm, fontSize: 13,
+                color: tk.textSecondary, background: tk.bgWhite,
+                cursor: "pointer",
+              }}>
+                取消
+              </button>
+              <button onClick={() => {
+                dispatchToast("已生成课堂，可进入SparkClass我的课堂查看", "success", () => {
+                  onNavigate("sparkclass");
+                }, "去查看");
+                setGenerateClassModalOpen(false);
+                setClassName("");
+              }} style={{
+                padding: "8px 16px", border: "none",
+                borderRadius: tk.radiusSm, fontSize: 13,
+                color: tk.textReverse, background: tk.brandDefault,
+                cursor: "pointer", fontWeight: 500,
+              }}>
+                确认生成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toggle Button when Canvas Closed ────────────────── */}
+      {!canvasVisible && (
+        <button onClick={() => setCanvasVisible(true)} style={{
+          position: "fixed", right: 0, top: "50%", transform: "translateY(-50%)",
+          width: 36, height: 80, background: tk.bgWhite,
+          border: `1px solid ${tk.borderHairline}`, borderRight: "none",
+          borderRadius: `${tk.radiusSm} 0 0 ${tk.radiusSm}`,
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          color: tk.textSecondary, zIndex: 100,
+          boxShadow: "-4px 0 12px rgba(0,0,0,0.06)",
+        }}>
+          <ChevronLeft size={16} />
+        </button>
       )}
     </div>
   );
@@ -4484,7 +5115,7 @@ type EditCallbacks = {
   patchDraft: (p: Partial<ClassPackageRes>) => void;
 };
 
-function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: number) => void, theme: "dark" | "light" = "dark", editing = false, callbacks?: EditCallbacks) {
+function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: number) => void, theme: "dark" | "light" = "dark", editing = false, callbacks?: EditCallbacks, elementSelectMode = false) {
   const isDark = theme === "dark";
   const fg = isDark ? "rgba(255,255,255,0.92)" : tk.textPrimary;
   const fg2 = isDark ? "rgba(255,255,255,0.6)" : tk.textSecondary;
@@ -4523,7 +5154,7 @@ function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: 
     
     return (
       <div style={{ ...fadeIn, height: "100%", width: "100%", display: "flex", flexDirection: "column", padding: "20px" }}>
-        <div style={{
+        <div data-module-name={pageData.title || `第 ${page + 1} 页`} data-module-type="ppt-page" style={{
           flex: 1, aspectRatio: "16 / 9", background: bg, border: `1px solid ${editing ? tk.borderBrand : border}`,
           borderRadius: 8, padding: 40, display: "flex",
           overflow: "hidden",
@@ -4721,44 +5352,46 @@ function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: 
     return (
       <div style={{ ...fadeIn, height: "100%", width: "100%", display: "flex", flexDirection: "column", padding: "32px 40px", overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         <div style={{ ...slideUp(0), fontSize: 13, color: fg3, marginBottom: 12 }}>第 {page + 1} / {res.sections.length} 节</div>
-        {editing ? (
-          <textarea
-            value={section.heading}
-            onChange={e => callbacks?.updateSection(page, { heading: e.target.value })}
-            rows={2}
-            style={{
-              ...slideUp(0.1), fontSize: 24, fontWeight: 600, lineHeight: 1.35, marginBottom: 20,
-              width: "100%", border: `2px solid ${tk.borderBrand}`, borderRadius: tk.radiusSm,
-              padding: "12px", outline: "none", background: isDark ? "#1a1a2e" : tk.bgWhite,
-              color: isDark ? "#fff" : tk.textPrimary, fontFamily: "var(--font-family)", resize: "none",
-            }}
-          />
-        ) : (
-          <div style={{ ...slideUp(0.1), fontSize: 24, fontWeight: 600, color: isDark ? "#fff" : tk.textPrimary, lineHeight: 1.35, marginBottom: 20 }}>{section.heading}</div>
-        )}
-        {section.image && (
-          <div style={{ ...slideUp(0.2), marginBottom: 16, borderRadius: 8, overflow: "hidden" }}>
-            <img src={section.image} alt="" style={{ width: "100%", maxHeight: 300, objectFit: "cover" }} />
-            {section.imageCaption && (
-              <div style={{ fontSize: 11, color: fg3, padding: 8 }}>{section.imageCaption}</div>
-            )}
-          </div>
-        )}
-        {editing ? (
-          <textarea
-            value={section.body}
-            onChange={e => callbacks?.updateSection(page, { body: e.target.value })}
-            rows={8}
-            style={{
-              ...slideUp(0.3), fontSize: 15, lineHeight: 1.8, maxWidth: 720, width: "100%",
-              border: `1px solid ${tk.borderBrand}`, borderRadius: tk.radiusSm,
-              padding: "12px 16px", outline: "none", background: isDark ? "#1a1a2e" : tk.bgWhite,
-              color: fg2, fontFamily: "var(--font-family)", resize: "vertical",
-            }}
-          />
-        ) : (
-          <div style={{ ...slideUp(0.3), fontSize: 15, color: fg2, lineHeight: 1.8, maxWidth: 720 }}>{section.body}</div>
-        )}
+        <div data-module-name={section.heading} data-module-type="section">
+          {editing ? (
+            <textarea
+              value={section.heading}
+              onChange={e => callbacks?.updateSection(page, { heading: e.target.value })}
+              rows={2}
+              style={{
+                ...slideUp(0.1), fontSize: 24, fontWeight: 600, lineHeight: 1.35, marginBottom: 20,
+                width: "100%", border: `2px solid ${tk.borderBrand}`, borderRadius: tk.radiusSm,
+                padding: "12px", outline: "none", background: isDark ? "#1a1a2e" : tk.bgWhite,
+                color: isDark ? "#fff" : tk.textPrimary, fontFamily: "var(--font-family)", resize: "none",
+              }}
+            />
+          ) : (
+            <div style={{ ...slideUp(0.1), fontSize: 24, fontWeight: 600, color: isDark ? "#fff" : tk.textPrimary, lineHeight: 1.35, marginBottom: 20 }}>{section.heading}</div>
+          )}
+          {section.image && (
+            <div data-module-name="图片" data-module-type="image" style={{ ...slideUp(0.2), marginBottom: 16, borderRadius: 8, overflow: "hidden" }}>
+              <img src={section.image} alt="" style={{ width: "100%", maxHeight: 300, objectFit: "cover" }} />
+              {section.imageCaption && (
+                <div style={{ fontSize: 11, color: fg3, padding: 8 }}>{section.imageCaption}</div>
+              )}
+            </div>
+          )}
+          {editing ? (
+            <textarea
+              value={section.body}
+              onChange={e => callbacks?.updateSection(page, { body: e.target.value })}
+              rows={8}
+              style={{
+                ...slideUp(0.3), fontSize: 15, lineHeight: 1.8, maxWidth: 720, width: "100%",
+                border: `1px solid ${tk.borderBrand}`, borderRadius: tk.radiusSm,
+                padding: "12px 16px", outline: "none", background: isDark ? "#1a1a2e" : tk.bgWhite,
+                color: fg2, fontFamily: "var(--font-family)", resize: "vertical",
+              }}
+            />
+          ) : (
+            <div data-module-name="正文" data-module-type="body" style={{ ...slideUp(0.3), fontSize: 15, color: fg2, lineHeight: 1.8, maxWidth: 720 }}>{section.body}</div>
+          )}
+        </div>
         <div style={{ ...slideUp(0.4), display: "flex", gap: 4, marginTop: 24, flexWrap: "wrap" }}>
           {res.sections.map((_, i) => (
             <span key={i} onClick={() => setPage(i)} style={{
@@ -4779,7 +5412,7 @@ function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: 
     if (!chapter) return null;
     return (
       <div style={{ ...fadeIn, height: "100%", width: "100%", display: "flex", flexDirection: "column", padding: "20px" }}>
-        <div style={{ ...slideUp(0),
+        <div data-module-name={chapter.title} data-module-type="video-chapter" style={{ ...slideUp(0),
           width: "100%", aspectRatio: "16/9",
           background: isDark ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" : tk.bgPrimary,
           borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
@@ -4916,7 +5549,7 @@ function renderResourceContent(res: ClassPackageRes, page: number, setPage: (p: 
   if (res.type === "图片" && res.images) {
     return (
       <div style={{ ...fadeIn, height: "100%", width: "100%", display: "flex", flexDirection: "column", padding: "20px" }}>
-        <div style={{ ...slideUp(0), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: bg, borderRadius: 8, marginBottom: 12 }}>
+        <div data-module-name={res.name || `图片 ${page + 1}`} data-module-type="image" style={{ ...slideUp(0), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: bg, borderRadius: 8, marginBottom: 12 }}>
           <img src={res.images[page]?.url || res.images[0]?.url} alt={res.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 4 }} />
         </div>
         <div style={{ ...slideUp(0.1), display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -5459,22 +6092,38 @@ const LESSON_PLAN_TEXT = `教学目标
 // ─── IconTip：icon 按钮 + hover tooltip（小字浮动在按钮上方） ────────────────
 function IconTip({ label, active, children }: { label: string; active?: boolean; children: React.ReactNode }) {
   const [show, setShow] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const childRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    if (childRef.current) {
+      const rect = childRef.current.getBoundingClientRect();
+      setPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+      });
+    }
+    setShow(true);
+  };
+
   return (
     <div
-      onMouseEnter={() => setShow(true)}
+      ref={childRef}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setShow(false)}
       style={{ position: "relative", display: "inline-flex" }}
     >
       {children}
-      {show && (
+      {show && createPortal(
         <div style={{
-          position: "absolute", bottom: "calc(100% + 6px)", left: "50%",
-          transform: "translateX(-50%)",
+          position: "fixed", left: position.x, top: position.y,
+          transform: "translate(-50%, -100%) translateY(-6px)",
           background: "rgba(0,0,0,0.85)", color: "#fff",
           fontSize: 11, lineHeight: "16px", padding: "3px 7px", borderRadius: 4,
-          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 50,
+          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 9999,
           boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-        }}>{label}</div>
+        }}>{label}</div>,
+        document.body
       )}
     </div>
   );
@@ -5998,6 +6647,7 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                       {minimalMode ? <PanelRight size={14} /> : <PanelLeft size={14} />}
                     </button>
                   </IconTip>
+
                   <button onClick={() => {
                     setDraft({
                       id: activeResource.id,
@@ -6517,13 +7167,58 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                   <ClipboardList size={14} style={{ color: rightPanelCollapsed ? tk.textSecondary : tk.textBrand }} />
                 </button>
               </div>
-              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <div 
+                ref={previewRef}
+                style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", scrollbarWidth: "none", msOverflowStyle: "none" }}
+                onMouseOver={(e) => {
+                  if (!elementSelectMode) return;
+                  const target = (e.target as HTMLElement).closest('[data-module-name]');
+                  if (target) {
+                    target.style.outline = `2px solid ${tk.brandDefault}`;
+                    target.style.outlineOffset = "2px";
+                    target.style.backgroundColor = "rgba(16,185,129,0.08)";
+                    target.style.borderRadius = "4px";
+                    const name = target.getAttribute('data-module-name') || '';
+                    const type = target.getAttribute('data-module-type') || '';
+                    const rect = target.getBoundingClientRect();
+                    setHoveredModule({ name, type, rect });
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!elementSelectMode) return;
+                  const target = (e.target as HTMLElement).closest('[data-module-name]');
+                  if (target) {
+                    target.style.outline = "";
+                    target.style.outlineOffset = "";
+                    target.style.backgroundColor = "";
+                    target.style.borderRadius = "";
+                  }
+                  setHoveredModule(null);
+                }}
+                onClick={(e) => {
+                  if (!elementSelectMode) return;
+                  const target = (e.target as HTMLElement).closest('[data-module-name]');
+                  if (target) {
+                    const name = target.getAttribute('data-module-name') || '';
+                    const type = target.getAttribute('data-module-type') || '';
+                    const rect = target.getBoundingClientRect();
+                    setSelectedModule({ name, type, rect });
+                  } else {
+                    setSelectedModule(null);
+                  }
+                }}
+              >
                 {activeRes.phaseIdx === -1 ? (
                   <div style={{ padding: tk.spacingLg }}>
                     <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
                     <div style={{ fontSize: 13, color: tk.textSecondary, lineHeight: "1.8" }}>
                       {view.sections?.map((section, si) => (
-                        <div key={si} style={{ marginBottom: 16 }}>
+                        <div 
+                          key={si} 
+                          style={{ marginBottom: 16 }}
+                          data-module-name={section.heading}
+                          data-module-type="section"
+                        >
                           <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
                           {editing ? (
                             <textarea
@@ -6548,9 +7243,67 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                   renderResourceContent(view, pageIndex, setPageIndex, "light", editing, {
                     updatePage, updateSection, updateChapter, updateQuestion, updateOption,
                     patchDraft,
-                  })
+                  }, elementSelectMode)
                 )}
               </div>
+
+              {(hoveredModule || selectedModule) && (
+                <div 
+                  style={{
+                    position: "fixed",
+                    left: (hoveredModule || selectedModule)!.rect.left,
+                    top: (hoveredModule || selectedModule)!.rect.top - 24,
+                    backgroundColor: tk.brandDefault,
+                    color: tk.textReverse,
+                    fontSize: 11,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    zIndex: 9999,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {(hoveredModule || selectedModule)!.name}
+                </div>
+              )}
+
+              {selectedModule && (
+                <div 
+                  style={{
+                    position: "fixed",
+                    left: selectedModule.rect.left + selectedModule.rect.width - 80,
+                    top: selectedModule.rect.top + 8,
+                    zIndex: 9999,
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newModule = { name: selectedModule.name, type: selectedModule.type, id: Date.now() };
+                      if (onModulesChange) {
+                        onModulesChange(newModule);
+                      }
+                      setSelectedModule(null);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      backgroundColor: tk.bgWhite,
+                      border: `1px solid ${tk.borderBrand}`,
+                      borderRadius: tk.radiusSm,
+                      color: tk.textBrand,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      boxShadow: tk.shadowMd,
+                    }}
+                  >
+                    <MessageSquarePlus size={14} />
+                    添加到对话
+                  </button>
+                </div>
+              )}
             </div>
 
             {!rightPanelCollapsed && (
@@ -7158,7 +7911,7 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
 
           <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0, background: tk.bgPrimary, padding: 16 }}>
             <div style={{ flex: rightPanelCollapsed ? 1 : 3, background: tk.bgWhite, overflow: "hidden", minWidth: 0, position: "relative", borderRadius: 8 }}>
-              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 {activeRes.phaseIdx === -1 ? (
                   <div style={{ padding: tk.spacingLg }}>
                     <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
@@ -7175,9 +7928,67 @@ function ClassDetailPage({ cls, onTeach, initialTab, minimalMode, setMinimalMode
                   renderResourceContent(view, pageIndex, setPageIndex, "light", editing, {
                     updatePage, updateSection, updateChapter, updateQuestion, updateOption,
                     patchDraft,
-                  })
+                  }, elementSelectMode)
                 )}
               </div>
+
+              {(hoveredModule || selectedModule) && (
+                <div 
+                  style={{
+                    position: "fixed",
+                    left: (hoveredModule || selectedModule)!.rect.left,
+                    top: (hoveredModule || selectedModule)!.rect.top - 24,
+                    backgroundColor: tk.brandDefault,
+                    color: tk.textReverse,
+                    fontSize: 11,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    zIndex: 9999,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {(hoveredModule || selectedModule)!.name}
+                </div>
+              )}
+
+              {selectedModule && (
+                <div 
+                  style={{
+                    position: "fixed",
+                    left: selectedModule.rect.left + selectedModule.rect.width - 80,
+                    top: selectedModule.rect.top + 8,
+                    zIndex: 9999,
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newModule = { name: selectedModule.name, type: selectedModule.type, id: Date.now() };
+                      if (onModulesChange) {
+                        onModulesChange(newModule);
+                      }
+                      setSelectedModule(null);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      backgroundColor: tk.bgWhite,
+                      border: `1px solid ${tk.borderBrand}`,
+                      borderRadius: tk.radiusSm,
+                      color: tk.textBrand,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      boxShadow: tk.shadowMd,
+                    }}
+                  >
+                    <MessageSquarePlus size={14} />
+                    添加到对话
+                  </button>
+                </div>
+              )}
             </div>
 
             {!rightPanelCollapsed && (
@@ -9636,10 +10447,34 @@ const MY_ASSETS: Asset[] = [
   },
 ];
 
-function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview" | "edit" | "teaching" }) {
+function ClassPackageViewer({ 
+  pkg, 
+  mode,
+  externalPhasesCollapsed,
+  onPhasesCollapsedChange,
+  externalActiveRes,
+  onActiveResChange,
+  onModulesChange,
+  elementSelectMode,
+}: { 
+  pkg?: ClassPackage; 
+  mode?: "preview" | "edit" | "teaching";
+  externalPhasesCollapsed?: boolean;
+  onPhasesCollapsedChange?: (collapsed: boolean) => void;
+  externalActiveRes?: { phaseIdx: number; resIdx: number };
+  onActiveResChange?: (res: { phaseIdx: number; resIdx: number }) => void;
+  onModulesChange?: (module: { name: string; type: string; id: number }) => void;
+  elementSelectMode?: boolean;
+}) {
   const [pageIndex, setPageIndex] = useState(0);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const editing = mode === "edit";
+  const [draft, setDraft] = useState<ClassPackageRes | null>(null);
   const [hoveredRes, setHoveredRes] = useState<{ phaseIdx: number; resIdx: number } | null>(null);
+  const [hoveredModule, setHoveredModule] = useState<{ name: string; type: string; rect: DOMRect } | null>(null);
+  const [selectedModule, setSelectedModule] = useState<{ name: string; type: string; rect: DOMRect } | null>(null);
+  const [selectedModules, setSelectedModules] = useState<{ name: string; type: string; id: number }[]>([]);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const convertResources = useMemo(() => {
     if (pkg && pkg.phases && pkg.phases.length > 0) {
@@ -9706,11 +10541,16 @@ function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview
   useEffect(() => {
     setResources(convertResources);
     setPhases(convertPhases);
-    setActiveRes({ phaseIdx: 0, resIdx: 0 });
+    if (!externalActiveRes) setActiveRes({ phaseIdx: 0, resIdx: 0 });
     setPageIndex(0);
   }, [convertResources, convertPhases]);
 
-  const [activeRes, setActiveRes] = useState<{ phaseIdx: number; resIdx: number }>({ phaseIdx: 0, resIdx: 0 });
+  const [internalActiveRes, setInternalActiveRes] = useState<{ phaseIdx: number; resIdx: number }>({ phaseIdx: 0, resIdx: 0 });
+  const activeRes = externalActiveRes || internalActiveRes;
+  const setActiveRes = (val: { phaseIdx: number; resIdx: number }) => {
+    setInternalActiveRes(val);
+    onActiveResChange?.(val);
+  };
 
   const switchResource = (phaseIdx: number, resIdx: number) => {
     setActiveRes({ phaseIdx, resIdx });
@@ -9733,7 +10573,12 @@ function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview
   const phaseScrollRef = useRef<HTMLDivElement | null>(null);
   const [phasesHover, setPhasesHover] = useState(false);
   const [phasesOverflow, setPhasesOverflow] = useState(false);
-  const [phasesCollapsed, setPhasesCollapsed] = useState(false);
+  const [internalPhasesCollapsed, setInternalPhasesCollapsed] = useState(false);
+  const phasesCollapsed = externalPhasesCollapsed !== undefined ? externalPhasesCollapsed : internalPhasesCollapsed;
+  const setPhasesCollapsed = (val: boolean) => {
+    setInternalPhasesCollapsed(val);
+    onPhasesCollapsedChange?.(val);
+  };
   useEffect(() => {
     const el = phaseScrollRef.current;
     if (!el) return;
@@ -9758,8 +10603,23 @@ function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview
         ]
       } as ClassPackageRes)
     : resources[phases[activeRes.phaseIdx].resIdx[activeRes.resIdx]];
-  const view = activeResource;
+
+  useEffect(() => {
+    if (editing) {
+      setDraft({ ...activeResource });
+    } else {
+      setDraft(null);
+    }
+  }, [editing, activeResource]);
+
+  const view = editing && draft ? draft : activeResource;
   const currentPhase = activeRes.phaseIdx === -1 ? undefined : phases[activeRes.phaseIdx];
+
+  const patchDraft = (p: Partial<ClassPackageRes>) => setDraft(d => d ? { ...d, ...p } : d);
+  const updateSection = (i: number, p: Partial<{ heading: string; body: string }>) => {
+    const arr = (view.sections || []).map((s, k) => k === i ? { ...s, ...p } : s);
+    patchDraft({ sections: arr });
+  };
 
   const [previewFs, setPreviewFs] = useState(false);
   const [tocPanelOpen, setTocPanelOpen] = useState(false);
@@ -10335,23 +11195,171 @@ function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview
             <ClipboardList size={14} style={{ color: rightPanelCollapsed ? tk.textSecondary : tk.textBrand }} />
           </button>
         </div>
-        <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        <div 
+          ref={previewRef}
+          style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", scrollbarWidth: "none", msOverflowStyle: "none" }}
+          onMouseOver={(e) => {
+            if (!elementSelectMode) return;
+            const target = (e.target as HTMLElement).closest('[data-module-name]');
+            if (target) {
+              target.style.outline = `2px solid ${tk.brandDefault}`;
+              target.style.outlineOffset = "2px";
+              target.style.backgroundColor = "rgba(16,185,129,0.08)";
+              target.style.borderRadius = "4px";
+              const name = target.getAttribute('data-module-name') || '';
+              const type = target.getAttribute('data-module-type') || '';
+              const rect = target.getBoundingClientRect();
+              setHoveredModule({ name, type, rect });
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!elementSelectMode) return;
+            const target = (e.target as HTMLElement).closest('[data-module-name]');
+            if (target) {
+              target.style.outline = "";
+              target.style.outlineOffset = "";
+              target.style.backgroundColor = "";
+              target.style.borderRadius = "";
+            }
+            setHoveredModule(null);
+          }}
+          onClick={(e) => {
+            if (!elementSelectMode) return;
+            const target = (e.target as HTMLElement).closest('[data-module-name]');
+            if (target) {
+              const name = target.getAttribute('data-module-name') || '';
+              const type = target.getAttribute('data-module-type') || '';
+              const rect = target.getBoundingClientRect();
+              setSelectedModule({ name, type, rect });
+            } else {
+              setSelectedModule(null);
+            }
+          }}
+        >
           {activeRes.phaseIdx === -1 ? (
             <div style={{ padding: tk.spacingLg }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
               <div style={{ fontSize: 13, color: tk.textSecondary, lineHeight: "1.8" }}>
                 {view.sections?.map((section, si) => (
-                  <div key={si} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
-                    <div>{section.body}</div>
+                  <div key={si} style={{ marginBottom: 16 }} data-module-name={section.heading} data-module-type="section">
+                    {editing ? (
+                      <>
+                        <input 
+                          value={section.heading}
+                          onChange={(e) => updateSection(si, { heading: e.target.value })}
+                          style={{
+                            fontSize: 14, fontWeight: 600, color: tk.textPrimary,
+                            border: `1px solid ${tk.borderDefault}`, borderRadius: tk.radiusSm,
+                            padding: "4px 8px", marginBottom: 8, width: "100%",
+                            outline: "none", fontFamily: "inherit",
+                          }}
+                        />
+                        <textarea 
+                          value={section.body}
+                          onChange={(e) => updateSection(si, { body: e.target.value })}
+                          style={{
+                            fontSize: 13, color: tk.textSecondary, lineHeight: "1.8",
+                            border: `1px solid ${tk.borderDefault}`, borderRadius: tk.radiusSm,
+                            padding: "8px 12px", width: "100%", minHeight: 80,
+                            resize: "vertical", outline: "none", fontFamily: "inherit",
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: tk.textPrimary, marginBottom: 8 }}>{section.heading}</div>
+                        <div data-module-name="正文" data-module-type="body">{section.body}</div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
+              {editing && (
+                <button 
+                  onClick={() => {
+                    const arr = [...(view.sections || []), { heading: "新小节", body: "" }];
+                    patchDraft({ sections: arr });
+                  }}
+                  style={{
+                    marginTop: 8, padding: "6px 12px",
+                    background: tk.bgWhite, border: `1px dashed ${tk.borderDefault}`,
+                    borderRadius: tk.radiusSm, cursor: "pointer",
+                    color: tk.textSecondary, fontSize: 12,
+                  }}
+                >
+                  <Plus size={12} style={{ marginRight: 4, display: "inline" }} /> 添加小节
+                </button>
+              )}
             </div>
           ) : (
-            renderResourceContent(view, pageIndex, setPageIndex, "light", false)
+            renderResourceContent(view, pageIndex, setPageIndex, "light", editing, {
+              updatePage: (i, p) => {},
+              updateSection,
+              updateChapter: (i, p) => {},
+              updateQuestion: (i, p) => {},
+              updateOption: (q, o, p) => {},
+              patchDraft,
+            }, elementSelectMode)
           )}
         </div>
+
+        {(hoveredModule || selectedModule) && (
+          <div 
+            style={{
+              position: "fixed",
+              left: (hoveredModule || selectedModule)!.rect.left,
+              top: (hoveredModule || selectedModule)!.rect.top - 24,
+              backgroundColor: tk.brandDefault,
+              color: tk.textReverse,
+              fontSize: 11,
+              padding: "3px 8px",
+              borderRadius: 4,
+              zIndex: 9999,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {(hoveredModule || selectedModule)!.name}
+          </div>
+        )}
+
+        {selectedModule && (
+          <div 
+            style={{
+              position: "fixed",
+              left: selectedModule.rect.left + selectedModule.rect.width - 80,
+              top: selectedModule.rect.top + 8,
+              zIndex: 9999,
+            }}
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newModule = { name: selectedModule.name, type: selectedModule.type, id: Date.now() };
+                if (onModulesChange) {
+                  onModulesChange(newModule);
+                }
+                setSelectedModule(null);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                backgroundColor: tk.bgWhite,
+                border: `1px solid ${tk.borderBrand}`,
+                borderRadius: tk.radiusSm,
+                color: tk.textBrand,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: "pointer",
+                boxShadow: tk.shadowMd,
+              }}
+            >
+              <MessageSquarePlus size={14} />
+              添加到对话
+            </button>
+          </div>
+        )}
       </div>
 
       {!rightPanelCollapsed && (
@@ -10612,7 +11620,7 @@ function ClassPackageViewer({ pkg, mode }: { pkg?: ClassPackage; mode?: "preview
 
           <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0, background: tk.bgPrimary, padding: 16 }}>
             <div style={{ flex: rightPanelCollapsed ? 1 : 3, background: tk.bgWhite, overflow: "hidden", minWidth: 0, position: "relative", borderRadius: 8 }}>
-              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "center", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <div style={{ height: "100%", overflowY: "auto", padding: "32px 40px", display: "flex", flexDirection: "column", scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 {activeRes.phaseIdx === -1 ? (
                   <div style={{ padding: tk.spacingLg }}>
                     <div style={{ fontSize: 16, fontWeight: 600, color: tk.textPrimary, marginBottom: 16 }}>教案</div>
@@ -13677,7 +14685,7 @@ export default function App() {
             onClassClick={(id) => { setSparkTab("classes"); setSparkView({ type: "detail", id }); handleNavigate("sparkclass"); }}
           />
         )}
-        {activeModule === "myta" && <MyTA onNavigate={handleNavigate} />}
+        {activeModule === "myta" && <MyTA onNavigate={handleNavigate} minimalMode={minimalMode} setMinimalMode={setMinimalMode} />}
         {activeModule === "sparkclass" && (
           <SparkClass
             tab={sparkTab} setTab={setSparkTab}
